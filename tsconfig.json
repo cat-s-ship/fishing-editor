@@ -1,0 +1,15 @@
+{
+  "extends": "@tsconfig/svelte/tsconfig.json",
+
+  "compilerOptions": {
+    "strict": true,
+    "module": "es2022",
+    "moduleResolution": "node",
+    "paths": {
+      "#/*": ["./src/*"]
+    },
+  },
+
+  "include": ["src/**/*"],
+  "exclude": ["node_modules/*", "__sapper__/*", "public/*"]
+}
