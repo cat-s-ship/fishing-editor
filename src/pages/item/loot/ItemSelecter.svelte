@@ -10,7 +10,7 @@
 <div>
   <ul>
     {#each items as item, index}
-      <il>
+      <li>
         <button
           style={(Option.isSome(selected) && selected === index) ? "color: red;" : ""}
           on:click={_ => {
@@ -31,7 +31,7 @@
         >
           {item.Name}
         </button>
-      </il>
+      </li>
     {/each}
   </ul>
 
@@ -40,11 +40,17 @@
     on:click={_ => {
       Option.reduce(
         selected,
-        selectedId => submit(Option.mkSome(items[selectedId])),
+        selectedId => void submit(Option.mkSome(items[selectedId])),
         () => {}
       )
     }}
   >
     Select
+  </button>
+
+  <button
+    on:click={_ => void submit(Option.mkNone())}
+  >
+    Cancel
   </button>
 </div>

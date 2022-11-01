@@ -2,6 +2,8 @@
   import { MapExt } from "@fering-org/functional-helper"
 
   import { type ItemId, ItemsContainer } from "#/api"
+  import ItemSelecter from "../item/loot/ItemSelecter.svelte";
+  import { empty } from "svelte/internal";
 
   export let editItem: (itemId: ItemId) => void
   export let itemsContainer: ItemsContainer
@@ -12,7 +14,17 @@
   <ul>
     {#each MapExt.toArray(itemsContainer, (k, v) => v) as item, index}
       <il>
-        <div>{JSON.stringify(item)}</div>
+        <div>Name: {item.Name}</div>
+        <div>
+          <span>Loot: </span>
+          {#if item.Loot.length > 0}
+            {#each item.Loot as itemId}
+              <span>{ItemsContainer.get(itemsContainer, itemId)?.Name}, </span>
+            {/each}
+          {:else}
+            <span>empty</span>
+          {/if}
+        </div>
 
         <button
           on:click={_ => void editItem(item.ItemId)}
