@@ -2,6 +2,8 @@
   import { UnionCase, type EmptyUnionCase, Option, Result } from "@fering-org/functional-helper"
 
   import { type ItemId, ItemsContainer, Item } from "#/api"
+  import { saveToDisc } from "#/common"
+  import Upload from "#/components/Upload.svelte"
   import ItemComponent from "./item/Index.svelte"
   import ItemsList from "./itemsList/Index.svelte"
 
@@ -24,9 +26,37 @@
       () => Result.mkError<Item, ItemId>(itemId)
     )
   }
+
+  function uploadHandle(json: string) {
+    const res = ItemsContainer.load(json)
+    itemsContainer = res
+    page = UnionCase.mkEmptyUnionCase("ItemList")
+  }
 </script>
 
 <div>
+  <nav>
+    <Upload
+      accept="application/json"
+      startLoading={() => {}}
+      cb={uploadHandle}
+    >
+      Load
+    </Upload>
+
+    <button
+      on:click={_ => {
+        saveToDisc(
+          ItemsContainer.save(itemsContainer),
+          "items.json",
+          "application/json"
+        )
+      }}
+    >
+      Save
+    </button>
+  </nav>
+
   {#if page.case === "Item"}
     <div>
       <button

@@ -89,9 +89,11 @@ const options = {
     file: 'public/build/bundle.js'
   },
   plugins: [
-    rollupModuleMapPlugin({
+    rollupModuleMapPlugin({ // TODO: add mask
       "#/api": "./src/api/index.ts",
       "#/components/Input.svelte": "./src/components/Input.svelte",
+      "#/components/Upload.svelte": "./src/components/Upload.svelte",
+      "#/common": "./src/common.ts",
     }),
 
     svelte({

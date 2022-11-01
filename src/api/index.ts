@@ -35,14 +35,30 @@ export module ItemsContainer {
    * `GET /items`
    */
   export function load(json: string): ItemsContainer {
-    throw JSON.parse(json)
+    return JSON.parse(
+      json,
+      (key, value) => {
+        if(typeof value === 'object' && value !== null) {
+          if (value.dataType === 'Map') {
+            return new Map(value.value)
+          }
+        }
+        return value
+      }
+    )
   }
 
   /**
    * `POST /items`
    */
   export function save(itemsContainer: ItemsContainer): string {
-    throw JSON.stringify(itemsContainer)
+    return JSON.stringify(
+      itemsContainer,
+      (key, value) => value instanceof Map ? {
+        dataType: "Map",
+        value: Array.from(value.entries()), // or with spread: value: [...value]
+      } : value,
+    )
   }
 
   /**
