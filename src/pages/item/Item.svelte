@@ -39,6 +39,7 @@
   />
 
   <Loot
+    id={item.ItemId}
     loot={item.Loot.map(id => getItemById(id))}
     removeByIndex={index => {
       updateItem({ Loot: { $set: ArrayExt.remove(item.Loot, index) } })

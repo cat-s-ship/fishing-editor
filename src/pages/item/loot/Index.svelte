@@ -4,6 +4,7 @@
   import type { Item, ItemId } from "#/api"
   import ItemSelecter from "./ItemSelecter.svelte"
 
+  export let id: ItemId
   export let loot: Item []
   export let removeByIndex: (index: number) => void
   export let insertAfter: (index: number, itemId: ItemId) => void
@@ -37,7 +38,7 @@
 
   {#if isItemSelecterOn}
     <ItemSelecter
-      items={getAllItems()}
+      items={getAllItems().filter(x => (x.ItemId !== id) && !loot.includes(x))}
       submit={item => {
         Option.reduce(
           item,
