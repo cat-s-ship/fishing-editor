@@ -29,6 +29,12 @@
           {/if}
         </div>
         <div>Description: {item.Description}</div>
+        {#if item.ImageUrl}
+          <div>
+            <span>Image: </span>
+            <img src={item.ImageUrl} alt="" width=40>
+          </div>
+        {/if}
 
         <button
           on:click={_ => void editItem(item.ItemId)}

@@ -9,6 +9,7 @@ export type Item = {
   Name: string
   Loot: ItemId []
   Description: string
+  ImageUrl: Option<string>
 }
 export module Item {
   export function create(itemId: ItemId): Item {
@@ -17,6 +18,7 @@ export module Item {
       Name: "",
       Loot: [],
       Description: "",
+      ImageUrl: Option.mkNone(),
     }
   }
 }

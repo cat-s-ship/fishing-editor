@@ -1,6 +1,6 @@
 <script lang="ts">
   import update, { type Spec } from "immutability-helper"
-  import { ArrayExt, MapExt } from "@fering-org/functional-helper"
+  import { ArrayExt, MapExt, Option } from "@fering-org/functional-helper"
 
   import { ItemsContainer, type Item, type ItemId } from "#/api"
   import Input from "#/components/Input.svelte"
@@ -58,4 +58,15 @@
       updateItem({ Description: { $set: v } })
     }}
   />
+
+  <Input
+    label="Image URL:"
+    value={Option.reduce(item.ImageUrl, x => x, () => "")}
+    submit={v => {
+      updateItem({ ImageUrl: { $set: v !== "" ? Option.mkSome(v) : Option.mkNone() } })
+    }}
+  />
+  {#if Option.isSome(item.ImageUrl)}
+    <img src={item.ImageUrl} alt="pic for item">
+  {/if}
 </div>
