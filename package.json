@@ -7,6 +7,7 @@
     "@rollup/plugin-typescript": "^8.3.4",
     "@tsconfig/svelte": "^3.0.0",
     "@types/uuid": "^8.3.4",
+    "gh-pages": "^4.0.0",
     "nollup": "^0.20.1",
     "rollup": "^2.78.1",
     "rollup-plugin-css-only": "^3.1.0",
@@ -26,11 +27,14 @@
     "uuid": "^9.0.0"
   },
   "scripts": {
+    "rmdir": "node -e \"var fs = require('fs');process.argv.slice(1).map((fpath)=>{ try {fs.rmdirSync(fpath,{recursive: true})} catch(e){console.warn('Error folder:', fpath, e)}});process.exit(0);\"",
     "build": "rollup -c",
     "dev:rollup": "rollup -c -w",
     "dev:livereload": "rollup -c -w --environment LIVERELOAD",
     "dev:nollup": "nollup -c --hot --port 5000 --content-base ./public",
     "dev": "npm run dev:nollup",
-    "start": "sirv public"
+    "start": "sirv public",
+    "deploy": "npm run rmdir -- public/build && npm run build",
+    "deploy:publish": "npm run deploy && gh-pages -d public"
   }
 }
