@@ -2,8 +2,6 @@
   import { MapExt } from "@fering-org/functional-helper"
 
   import { type ItemId, ItemsContainer } from "#/api"
-  import ItemSelecter from "../item/loot/ItemSelecter.svelte";
-  import { empty } from "svelte/internal";
 
   export let editItem: (itemId: ItemId) => void
   export let itemsContainer: ItemsContainer
@@ -25,6 +23,7 @@
             <span>empty</span>
           {/if}
         </div>
+        <div>Description: {item.Description}</div>
 
         <button
           on:click={_ => void editItem(item.ItemId)}

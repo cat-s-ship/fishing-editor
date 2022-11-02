@@ -8,13 +8,15 @@ export type Item = {
   ItemId: ItemId
   Name: string
   Loot: ItemId []
+  Description: string
 }
 export module Item {
   export function create(itemId: ItemId): Item {
     return {
       ItemId: itemId,
       Name: "",
-      Loot: []
+      Loot: [],
+      Description: "",
     }
   }
 }

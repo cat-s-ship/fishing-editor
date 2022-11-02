@@ -49,4 +49,13 @@
     }}
     getAllItems={getAllItems}
   />
+
+  <Input
+    label="Description:"
+    isMultiline={true}
+    value={item.Description}
+    submit={v => {
+      updateItem({ Description: { $set: v } })
+    }}
+  />
 </div>
