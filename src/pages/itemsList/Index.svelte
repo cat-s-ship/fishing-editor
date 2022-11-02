@@ -1,11 +1,18 @@
 <script lang="ts">
-  import { MapExt } from "@fering-org/functional-helper"
+  import { MapExt, Option } from "@fering-org/functional-helper"
 
   import { type ItemId, ItemsContainer } from "#/api"
 
   export let editItem: (itemId: ItemId) => void
   export let itemsContainer: ItemsContainer
   export let updateItemsContainer: (itemsContainer: ItemsContainer) => void
+
+  function renderLoot(lootList: ItemId []) {
+    return lootList
+      .map(itemId => ItemsContainer.get(itemsContainer, itemId)?.Name)
+      .filter(Option.isSome)
+      .join(", ")
+  }
 </script>
 
 <div>
@@ -16,9 +23,7 @@
         <div>
           <span>Loot: </span>
           {#if item.Loot.length > 0}
-            {#each item.Loot as itemId}
-              <span>{ItemsContainer.get(itemsContainer, itemId)?.Name}, </span>
-            {/each}
+            {renderLoot(item.Loot)}
           {:else}
             <span>empty</span>
           {/if}
