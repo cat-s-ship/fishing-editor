@@ -15,11 +15,11 @@
   }
 </script>
 
-<div>
-  <ul>
+<div style="height: 100%; display: flex; flex-direction: column;">
+  <div style="overflow-y: auto;">
     {#each MapExt.toArray(itemsContainer, (k, v) => v) as item, index}
-      <il>
-        <div>Name: {item.Name}</div>
+      <div>
+        <h4>{item.Name}</h4>
         <div>
           <span>Loot: </span>
           {#if item.Loot.length > 0}
@@ -54,9 +54,9 @@
         >
           Remove
         </button>
-      </il>
+      </div>
     {/each}
-  </ul>
+  </div>
 
   <button
     on:click={_ => {

@@ -34,7 +34,7 @@
   }
 </script>
 
-<div>
+<main>
   <nav>
     <Upload
       accept="application/json"
@@ -77,12 +77,23 @@
       />
     </div>
   {:else if page.case === "ItemList"}
-    <ItemsList
-      editItem={itemId => {
-        page = UnionCase.mkUnionCase("Item", itemId)
-      }}
-      itemsContainer={itemsContainer}
-      updateItemsContainer={updateItemsContainer}
-    />
+    <div style="flex-grow: 1; overflow-y: auto;">
+      <ItemsList
+        editItem={itemId => {
+          page = UnionCase.mkUnionCase("Item", itemId)
+        }}
+        itemsContainer={itemsContainer}
+        updateItemsContainer={updateItemsContainer}
+      />
+    </div>
   {/if}
-</div>
+</main>
+
+<style>
+  main {
+    display: flex;
+    flex-direction: column;
+
+    height: 100vh;
+  }
+</style>
