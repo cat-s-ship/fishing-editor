@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from "uuid"
 import update from "immutability-helper"
-import { Option, Pair } from "@fering-org/functional-helper"
+import { Option, Pair, MapExt } from "@fering-org/functional-helper"
 
 export type ItemId = string // uuidv4
 
@@ -35,30 +35,14 @@ export module ItemsContainer {
    * `GET /items`
    */
   export function load(json: string): ItemsContainer {
-    return JSON.parse(
-      json,
-      (key, value) => {
-        if(typeof value === 'object' && value !== null) {
-          if (value.dataType === 'Map') {
-            return new Map(value.value)
-          }
-        }
-        return value
-      }
-    )
+    return JSON.parse(json, MapExt.reviver)
   }
 
   /**
    * `POST /items`
    */
   export function save(itemsContainer: ItemsContainer): string {
-    return JSON.stringify(
-      itemsContainer,
-      (key, value) => value instanceof Map ? {
-        dataType: "Map",
-        value: Array.from(value.entries()), // or with spread: value: [...value]
-      } : value,
-    )
+    return JSON.stringify(itemsContainer, MapExt.replacer)
   }
 
   /**
