@@ -9,7 +9,11 @@
 
   function renderLoot(lootList: ItemId []) {
     return lootList
-      .map(itemId => ItemsContainer.get(itemsContainer, itemId)?.Name)
+      .map(itemId => Option.reduce(
+        ItemsContainer.get(itemsContainer, itemId),
+        x => x.Name,
+        () => `unknown item with ${itemId} ID`
+      ))
       .filter(Option.isSome)
       .join(", ")
   }

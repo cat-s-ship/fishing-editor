@@ -1,6 +1,6 @@
 <script lang="ts">
   import update, { type Spec } from "immutability-helper"
-  import { ArrayExt, MapExt, Option } from "@fering-org/functional-helper"
+  import { ArrayExt, MapExt, Option, Result } from "@fering-org/functional-helper"
 
   import { ItemsContainer, type Item, type ItemId } from "#/api"
   import Input from "#/components/Input.svelte"
@@ -14,8 +14,12 @@
     updateItemsContainer(ItemsContainer.set(itemsContainer, item))
   }
 
-  function getItemById(itemId: ItemId) {
-    return ItemsContainer.get(itemsContainer, itemId) as Item // TODO
+  function getItemById(itemId: ItemId): Result<Item, string> {
+    return Option.reduce(
+      ItemsContainer.get(itemsContainer, itemId),
+      x => Result.mkOk(x),
+      () => Result.mkError(itemId)
+    )
   }
 
   function getAllItems() {
