@@ -17,6 +17,8 @@
 
   function updateItemsContainer(newItemsContainer: ItemsContainer) {
     itemsContainer = newItemsContainer
+
+    ItemsContainer.LocalStorage.save(itemsContainer)
   }
 
   function handle(itemId: ItemId) {
@@ -27,19 +29,24 @@
     )
   }
 
-  function uploadHandle(json: string) {
-    const res = ItemsContainer.load(json)
+  function uploadHandle(res: ItemsContainer) {
     itemsContainer = res
     page = UnionCase.mkEmptyUnionCase("ItemList")
+    ItemsContainer.LocalStorage.save(itemsContainer)
+  }
+
+  const localSave = ItemsContainer.LocalStorage.load()
+  if (localSave) {
+    uploadHandle(localSave)
   }
 </script>
 
 <main>
-  <nav>
+  <nav style="display: flex;">
     <Upload
       accept="application/json"
       startLoading={() => {}}
-      cb={uploadHandle}
+      cb={json => uploadHandle(ItemsContainer.load(json))}
     >
       Load
     </Upload>

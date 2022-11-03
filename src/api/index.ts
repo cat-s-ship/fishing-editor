@@ -69,4 +69,19 @@ export module ItemsContainer {
   export function remove(itemsContainer: ItemsContainer, itemId: ItemId): ItemsContainer {
     return update(itemsContainer, { $remove: [itemId] })
   }
+
+  export module LocalStorage {
+    const localSaveKey = "localSaveKey"
+
+    export function save(itemsContainer: ItemsContainer) {
+      window.localStorage.setItem(localSaveKey, ItemsContainer.save(itemsContainer))
+    }
+
+    export function load(): Option<ItemsContainer> {
+      const res = window.localStorage.getItem(localSaveKey)
+      if (res) {
+        return ItemsContainer.load(res)
+      }
+    }
+  }
 }
