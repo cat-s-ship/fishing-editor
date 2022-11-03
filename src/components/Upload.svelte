@@ -30,7 +30,7 @@
 </script>
 
 <div class="button-wrap">
-  <label class="button" for="upload">Load</label>
+  <label class="button" for="upload"><slot /></label>
   <input id="upload" type="file" accept={accept} on:change={fetchFromDisc}/>
 </div>
 
