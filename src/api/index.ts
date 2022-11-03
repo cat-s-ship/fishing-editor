@@ -4,7 +4,12 @@ import { Option, Pair, MapExt } from "@fering-org/functional-helper"
 
 export type ItemId = string // uuidv4
 
+export enum Version {
+  V0
+}
+
 export type Item = {
+  Version: Version
   ItemId: ItemId
   Name: string
   Loot: ItemId []
@@ -14,6 +19,7 @@ export type Item = {
 export module Item {
   export function create(itemId: ItemId): Item {
     return {
+      Version: Version.V0,
       ItemId: itemId,
       Name: "",
       Loot: [],
