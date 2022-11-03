@@ -48,7 +48,7 @@
       startLoading={() => {}}
       cb={json => uploadHandle(ItemsContainer.load(json))}
     >
-      Load
+      Загрузить
     </Upload>
 
     <button
@@ -60,7 +60,7 @@
         )
       }}
     >
-      Save
+      Сохранить
     </button>
   </nav>
 
@@ -69,7 +69,7 @@
       <button
         on:click={_ => { page = UnionCase.mkEmptyUnionCase("ItemList")}}
       >
-        Return to list
+        Вернуться к списку предметов
       </button>
 
       <ItemComponent

@@ -35,7 +35,7 @@
   <div>Id: {item.ItemId}</div>
 
   <Input
-    label="Name"
+    label="Название:"
     value={item.Name}
     submit={v => {
       updateItem({ Name: { $set: v } })
@@ -55,7 +55,7 @@
   />
 
   <Input
-    label="Description:"
+    label="Описание:"
     isMultiline={true}
     value={item.Description}
     submit={v => {
@@ -64,13 +64,13 @@
   />
 
   <Input
-    label="Image URL:"
+    label="Ссылка на изображение:"
     value={Option.reduce(item.ImageUrl, x => x, () => "")}
     submit={v => {
       updateItem({ ImageUrl: { $set: v !== "" ? Option.mkSome(v) : Option.mkNone() } })
     }}
   />
   {#if Option.isSome(item.ImageUrl)}
-    <img src={item.ImageUrl} alt="pic for item">
+    <img src={item.ImageUrl} alt="изображение для предмета">
   {/if}
 </div>

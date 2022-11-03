@@ -25,7 +25,7 @@
 </script>
 
 <div>
-  <div>Loot:</div>
+  <div>Можно поймать:</div>
   <div>
     <ul>
       {#each loot as item, index}
@@ -38,7 +38,7 @@
           <button
             on:click={_ => void removeByIndex(index)}
           >
-            Remove
+            Удалить
           </button>
         </il>
       {/each}
@@ -50,7 +50,7 @@
       isItemSelecterOn = true
     }}
   >
-    Add
+    Добавить
   </button>
 
   {#if isItemSelecterOn}

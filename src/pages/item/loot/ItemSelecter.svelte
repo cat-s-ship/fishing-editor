@@ -45,12 +45,12 @@
       )
     }}
   >
-    Select
+    Выбрать
   </button>
 
   <button
     on:click={_ => void submit(Option.mkNone())}
   >
-    Cancel
+    Отменить
   </button>
 </div>
