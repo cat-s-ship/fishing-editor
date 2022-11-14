@@ -9,6 +9,7 @@ import hmr from 'rollup-plugin-hot'
 import typescript from '@rollup/plugin-typescript'
 import css from 'rollup-plugin-css-only'
 import path from 'path'
+import define from 'rollup-plugin-define'
 
 // Set this to true to pass the --single flag to sirv (this serves your
 // index.html for any unmatched route, which is a requirement for SPA
@@ -95,7 +96,12 @@ const options = {
       "#/components/Upload.svelte": "./src/components/Upload.svelte",
       "#/common": "./src/common.ts",
     }),
-
+    define({
+      replacements: {
+        'process.env.NODE_ENV': '"production"',
+        'process.env.PUBLIC_URL': '"."',
+      }
+    }),
     svelte({
       preprocess: sveltePreprocess({ sourceMap: !isProduction }),
       compilerOptions: {
