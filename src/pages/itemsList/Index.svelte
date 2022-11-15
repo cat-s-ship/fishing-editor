@@ -1,7 +1,8 @@
 <script lang="ts">
+  import { onMount } from "svelte"
   import { MapExt, Option } from "@fering-org/functional-helper"
 
-  import { type ItemId, ItemsContainer } from "#/api"
+  import { type ItemId, ItemsContainer, Item } from "#/api"
 
   export let editItem: (itemId: ItemId) => void
   export let itemsContainer: ItemsContainer
@@ -17,11 +18,40 @@
       .filter(Option.isSome)
       .join(", ")
   }
+
+  $: itemsArr = MapExt.toArray(itemsContainer, (k, v) => v)
+
+  type Pattern = string
+  let patt: Pattern = ""
+
+  function includes(item: Item, patt: Pattern) {
+    return item.Name.toLowerCase().includes(patt)
+  }
+
+  $: itemsAfterFilter = itemsArr.filter(item => includes(item, patt))
+
+  function filterHandle(newPatt: Pattern) {
+    patt = newPatt.toLowerCase()
+    itemsAfterFilter = itemsArr.filter(item => includes(item, patt))
+  }
+
+  onMount(() => {
+    filterHandle(patt)
+  })
 </script>
 
 <div style="height: 100%; display: flex; flex-direction: column;">
+  <div>
+    <label for="filter">Фильтр:</label>
+    <input
+      id="filter"
+      type="text"
+      value={patt}
+      on:input={e => void filterHandle(e.currentTarget.value)}
+    >
+  </div>
   <div style="overflow-y: auto;">
-    {#each MapExt.toArray(itemsContainer, (k, v) => v) as item, index}
+    {#each itemsAfterFilter as item, index}
       <div>
         <h4>{item.Name}</h4>
         <div>
