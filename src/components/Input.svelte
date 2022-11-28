@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Option } from "@fering-org/functional-helper"
 
+  export let id: string
   export let label: Option<string>
   export let value: string
   export let submit: (text: string) => void
@@ -9,10 +10,10 @@
 </script>
 
 <div>
-  <label for="id">{label}</label>
+  <label for={id}>{label}</label>
   {#if isMultiline}
     <textarea
-      id="id"
+      id={id}
       name="text"
       cols={30} rows={10}
       value={currentValue}
@@ -22,7 +23,7 @@
     />
   {:else}
     <input
-      id="id"
+      id={id}
       type="text"
       value={currentValue}
       on:input={e => {

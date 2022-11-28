@@ -54,14 +54,26 @@
     {#each itemsAfterFilter as item, index}
       <div>
         <h4>{item.Name}</h4>
-        <div>
-          <span>Можно поймать: </span>
-          {#if item.Loot.length > 0}
-            {renderLoot(item.Loot)}
-          {:else}
-            <span>ничего</span>
-          {/if}
-        </div>
+        {#if item.AsBait}
+          <div>
+            <span>Служит наживкой для: </span>
+            {#if item.AsBait.length > 0}
+              {renderLoot(item.AsBait)}
+            {:else}
+              <span>ничего</span>
+            {/if}
+          </div>
+        {/if}
+        {#if item.AsChest}
+          <div>
+            <span>Является сундуком, в котором может лежать: </span>
+            {#if item.AsChest.length > 0}
+              {renderLoot(item.AsChest)}
+            {:else}
+              <span>ничего</span>
+            {/if}
+          </div>
+        {/if}
         <div>Описание: {item.Description}</div>
         {#if item.ImageUrl}
           <div>

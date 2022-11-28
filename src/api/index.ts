@@ -5,10 +5,18 @@ import { Option, Pair, MapExt } from "@fering-org/functional-helper"
 export type ItemId = string // uuidv4
 
 export enum Version {
-  V0
+  V0,
+  V1
 }
 
-export type Item = {
+export type Loot = ItemId []
+export module Loot {
+  export function createEmpty(): Loot {
+    return []
+  }
+}
+
+export type ItemV0 = {
   Version: Version
   ItemId: ItemId
   Name: string
@@ -16,13 +24,24 @@ export type Item = {
   Description: string
   ImageUrl: Option<string>
 }
+
+export type Item = {
+  Version: Version
+  ItemId: ItemId
+  Name: string
+  AsBait: Option<Loot>
+  AsChest: Option<Loot>
+  Description: string
+  ImageUrl: Option<string>
+}
 export module Item {
   export function create(itemId: ItemId): Item {
     return {
-      Version: Version.V0,
+      Version: Version.V1,
       ItemId: itemId,
       Name: "",
-      Loot: [],
+      AsBait: Option.mkNone(),
+      AsChest: Option.mkNone(),
       Description: "",
       ImageUrl: Option.mkNone(),
     }
@@ -45,7 +64,30 @@ export module ItemsContainer {
    * `GET /items`
    */
   export function load(json: string): ItemsContainer {
-    return JSON.parse(json, MapExt.reviver)
+    const raws: Map<ItemId, Record<string, unknown>> = JSON.parse(json, MapExt.reviver)
+    const result: Pair<ItemId, Item>[] = MapExt.toArray(raws, (key: ItemId, raw) => {
+      const currentVersion = raw["Version"]
+      switch (currentVersion) {
+        case Version.V0:
+          const current = raw as ItemV0
+          const result: Item = {
+            Version: Version.V1,
+            ItemId: current.ItemId,
+            Name: current.Name,
+            AsBait: Option.mkSome(current.Loot),
+            AsChest: Option.mkNone(),
+            Description: current.Description,
+            ImageUrl: current.ImageUrl,
+          }
+          return [key, result]
+        case Version.V1:
+          return [key, raw as Item]
+        default:
+          throw new Error(`${currentVersion} not implemented yet!`)
+      }
+    })
+
+    return new Map(result)
   }
 
   /**

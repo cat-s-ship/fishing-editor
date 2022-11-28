@@ -2,9 +2,11 @@
   import update, { type Spec } from "immutability-helper"
   import { ArrayExt, MapExt, Option, Result } from "@fering-org/functional-helper"
 
-  import { ItemsContainer, type Item, type ItemId } from "#/api"
+  import { ItemsContainer, type Item, type ItemId, Loot } from "#/api"
   import Input from "#/components/Input.svelte"
-  import Loot from "./loot/Index.svelte"
+  import LootComponent from "./loot/Index.svelte"
+  import Checkbox from "#/components/Checkbox.svelte"
+  import AsBaitForm from "./AsBaitForm.svelte"
 
   export let item: Item
   export let itemsContainer: ItemsContainer
@@ -35,6 +37,7 @@
   <div>Id: {item.ItemId}</div>
 
   <Input
+    id="nameInput"
     label="Название:"
     value={item.Name}
     submit={v => {
@@ -42,19 +45,28 @@
     }}
   />
 
-  <Loot
-    id={item.ItemId}
-    loot={item.Loot.map(id => getItemById(id))}
-    removeByIndex={index => {
-      updateItem({ Loot: { $set: ArrayExt.remove(item.Loot, index) } })
-    }}
-    insertAfter={(index, newItemId) => {
-      updateItem({ Loot: { $set: ArrayExt.insertAfter(item.Loot, newItemId, index) } })
-    }}
+  <AsBaitForm
+    label="Использовать в качестве наживки"
+    itemId={item.ItemId}
+    updateItem={updateItem}
     getAllItems={getAllItems}
+    getItemById={getItemById}
+    asLoot={item.AsBait}
+    field={"AsBait"}
+  />
+
+  <AsBaitForm
+    label="Использовать в качестве сундука"
+    itemId={item.ItemId}
+    updateItem={updateItem}
+    getAllItems={getAllItems}
+    getItemById={getItemById}
+    asLoot={item.AsChest}
+    field={"AsChest"}
   />
 
   <Input
+    id="descriptionInput"
     label="Описание:"
     isMultiline={true}
     value={item.Description}
@@ -64,6 +76,7 @@
   />
 
   <Input
+    id="imgUrlInput"
     label="Ссылка на изображение:"
     value={Option.reduce(item.ImageUrl, x => x, () => "")}
     submit={v => {

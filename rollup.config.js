@@ -94,6 +94,7 @@ const options = {
       "#/api": "./src/api/index.ts",
       "#/components/Input.svelte": "./src/components/Input.svelte",
       "#/components/Upload.svelte": "./src/components/Upload.svelte",
+      "#/components/Checkbox.svelte": "./src/components/Checkbox.svelte",
       "#/common": "./src/common.ts",
     }),
     define({
@@ -139,12 +140,9 @@ const options = {
     resolve({
       browser: true,
       dedupe: ['svelte'],
-
-      // moduleDirectories: []
-      // mo
     }),
-    commonjs(),
 
+    commonjs(),
 
     typescript({
       sourceMap: !isProduction,
