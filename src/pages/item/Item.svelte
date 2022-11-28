@@ -34,7 +34,7 @@
 </script>
 
 <div>
-  <div>Id: {item.ItemId}</div>
+  <div>Id: {item.Id}</div>
 
   <Input
     id="nameInput"
@@ -47,7 +47,7 @@
 
   <AsBaitForm
     label="Использовать в качестве наживки"
-    itemId={item.ItemId}
+    itemId={item.Id}
     updateItem={updateItem}
     getAllItems={getAllItems}
     getItemById={getItemById}
@@ -57,7 +57,7 @@
 
   <AsBaitForm
     label="Использовать в качестве сундука"
-    itemId={item.ItemId}
+    itemId={item.Id}
     updateItem={updateItem}
     getAllItems={getAllItems}
     getItemById={getItemById}

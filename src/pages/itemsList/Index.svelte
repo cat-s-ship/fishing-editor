@@ -83,7 +83,7 @@
         {/if}
 
         <button
-          on:click={_ => void editItem(item.ItemId)}
+          on:click={_ => void editItem(item.Id)}
         >
           Редактировать
         </button>
@@ -93,7 +93,7 @@
             updateItemsContainer(
               ItemsContainer.remove(
                 itemsContainer,
-                item.ItemId
+                item.Id
               )
             )
           }}

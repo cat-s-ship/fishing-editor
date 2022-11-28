@@ -27,7 +27,7 @@ export type ItemV0 = {
 
 export type Item = {
   Version: Version
-  ItemId: ItemId
+  Id: ItemId
   Name: string
   AsBait: Option<Loot>
   AsChest: Option<Loot>
@@ -38,7 +38,7 @@ export module Item {
   export function create(itemId: ItemId): Item {
     return {
       Version: Version.V1,
-      ItemId: itemId,
+      Id: itemId,
       Name: "",
       AsBait: Option.mkNone(),
       AsChest: Option.mkNone(),
@@ -72,7 +72,7 @@ export module ItemsContainer {
           const current = raw as ItemV0
           const result: Item = {
             Version: Version.V1,
-            ItemId: current.ItemId,
+            Id: current.ItemId,
             Name: current.Name,
             AsBait: Option.mkSome(current.Loot),
             AsChest: Option.mkNone(),
@@ -108,7 +108,7 @@ export module ItemsContainer {
    * `POST /items/:id`
    */
   export function set(itemsContainer: ItemsContainer, item: Item): ItemsContainer {
-    return update(itemsContainer, { $add: [[item.ItemId, item]] })
+    return update(itemsContainer, { $add: [[item.Id, item]] })
   }
 
   /**

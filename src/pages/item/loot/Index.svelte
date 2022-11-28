@@ -17,7 +17,7 @@
       Result.reduce(
         x,
         x => currentItem === x,
-        itemId => currentItem.ItemId === itemId
+        itemId => currentItem.Id === itemId
       )
     )
     return Option.isSome(res)
@@ -55,12 +55,12 @@
 
   {#if isItemSelecterOn}
     <ItemSelecter
-      items={getAllItems().filter(x => (x.ItemId !== id) && !lootIncludes(x))}
+      items={getAllItems().filter(x => (x.Id !== id) && !lootIncludes(x))}
       submit={item => {
         Option.reduce(
           item,
           item2 => {
-            insertAfter(loot.length - 1, item2.ItemId)
+            insertAfter(loot.length - 1, item2.Id)
           },
           () => {},
         )
