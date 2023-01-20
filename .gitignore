@@ -1,4 +1,8 @@
-/node_modules/
-/public/build/
+bin
+obj
+/node_modules
+/paket-files
 
-.DS_Store
+*.fs.js
+
+/dist
