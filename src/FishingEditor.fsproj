@@ -5,9 +5,16 @@
     <TargetFramework>net6.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="..\paket-files\gretmn102\DiaryWeb\src\Utils\registerServiceWorker.js" />
+    <Compile Include="..\paket-files\gretmn102\DiaryWeb\src\Utils\RegisterServiceWorker.fs" />
+    <Compile Include="..\paket-files\gretmn102\DiaryWeb\src\Components\Utils\ResultExt.fs" />
+    <Compile Include="..\paket-files\gretmn102\DiaryWeb\src\Components\Utils\Deferred.fs" />
+    <Compile Include="..\paket-files\gretmn102\DiaryWeb\src\Components\Utils\CustomDateTime.fs" />
+    <Compile Include="..\paket-files\gretmn102\DiaryWeb\src\Components\Download.fs" />
+    <Compile Include="..\paket-files\gretmn102\DiaryWeb\src\Components\Upload.fs" />
+    <Compile Include="..\paket-files\gretmn102\DiaryWeb\src\Components\DateTimeInput.fs" />
     <Compile Include="Commons.fs" />
     <Compile Include="Api.fs" />
-    <Compile Include="Upload.fs" />
     <Compile Include="ItemAdder.fs" />
     <Compile Include="ItemView.fs" />
     <Compile Include="ItemsList.fs" />

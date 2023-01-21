@@ -65,3 +65,13 @@ NUGET
     Thoth.Json (9.0)
       Fable.Core (>= 3.1.6)
       FSharp.Core (>= 4.7.2)
+GITHUB
+  remote: gretmn102/DiaryWeb
+    FULLPROJECT (94afa94f4192828169c65a49d59f2c071a578669)
+      Fable.Browser.Url
+      Fable.Builders.Fela
+      Fable.DateFunctions
+      Feliz
+      Feliz.Router
+      Feliz.UseElmish
+      Thoth.Json

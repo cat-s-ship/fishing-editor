@@ -9,3 +9,5 @@ nuget Feliz
 nuget Feliz.Router
 nuget Feliz.UseElmish
 nuget Thoth.Json
+
+github gretmn102/DiaryWeb:main
