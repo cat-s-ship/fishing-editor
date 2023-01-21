@@ -1,4 +1,4 @@
-module EventsList
+module ItemsList
 open Elmish
 open Feliz
 open Feliz.Router
@@ -6,7 +6,7 @@ open Feliz.Router
 open Commons
 open Api
 
-module SaveAndLoadEvents =
+module SaveAndLoad =
     open Elmish
     open Feliz
 
@@ -74,93 +74,93 @@ module SaveAndLoadEvents =
         ]
 
 type Msg =
-    | StartNewEvent
-    | SetEvent of Item
-    | RemoveEvent of Item
-    | EventViewMsg of ItemId * ItemView.Msg
-    | SaveAndLoadEventsMsg of SaveAndLoadEvents.Msg
+    | StartNewItem
+    | SetItem of Item
+    | RemoveItem of Item
+    | ItemViewMsg of ItemId * ItemView.Msg
+    | SaveAndLoadMsg of SaveAndLoad.Msg
     | Export
 
 type State =
     {
         LocalItems: LocalItems
-        Events: Map<ItemId, ItemView.State>
-        SaveAndLoadEventsState: SaveAndLoadEvents.State
+        Items: Map<ItemId, ItemView.State>
+        SaveAndLoadState: SaveAndLoad.State
     }
 
 let init localItems =
     let state =
         {
             LocalItems = localItems
-            Events =
+            Items =
                 localItems.Cache
                 |> Map.map (fun _ e ->
                     ItemView.init e
                 )
-            SaveAndLoadEventsState =
-                SaveAndLoadEvents.init
+            SaveAndLoadState =
+                SaveAndLoad.init
         }
     state, Cmd.none
 
 let update (msg: Msg) (state: State) =
     match msg with
-    | SetEvent e ->
+    | SetItem e ->
         let state =
             { state with
                 LocalItems =
                     state.LocalItems
                     |> LocalItems.set e
-                Events =
-                    Map.add e.Id (ItemView.init e) state.Events
+                Items =
+                    Map.add e.Id (ItemView.init e) state.Items
             }
         state, Cmd.none
-    | RemoveEvent e ->
+    | RemoveItem e ->
         let state =
             { state with
                 LocalItems =
                     state.LocalItems
                     |> LocalItems.remove e.Id
-                Events =
-                    Map.remove e.Id state.Events
+                Items =
+                    Map.remove e.Id state.Items
             }
         state, Cmd.none
-    | StartNewEvent ->
-        state, Cmd.navigate [| Routes.EventsAdderPageRoute |]
-    | EventViewMsg (dateTime, msg) ->
-        match Map.tryFind dateTime state.Events with
-        | Some eventEventState ->
-            match ItemView.update msg eventEventState with
+    | StartNewItem ->
+        state, Cmd.navigate [| Routes.ItemAdderPageRoute |]
+    | ItemViewMsg (dateTime, msg) ->
+        match Map.tryFind dateTime state.Items with
+        | Some itemState ->
+            match ItemView.update msg itemState with
             | ItemView.UpdateRes(state', msg) ->
                 let state =
                     { state with
-                        Events =
-                            Map.add dateTime state' state.Events
+                        Items =
+                            Map.add dateTime state' state.Items
                     }
-                state, msg |> Cmd.map (fun cmd -> EventViewMsg(dateTime, cmd))
-            | ItemView.UpdateEventRes e ->
-                state, Cmd.ofMsg (SetEvent e)
+                state, msg |> Cmd.map (fun cmd -> ItemViewMsg(dateTime, cmd))
+            | ItemView.UpdateItemRes e ->
+                state, Cmd.ofMsg (SetItem e)
             | ItemView.RemoveRes ->
-                state, Cmd.ofMsg (RemoveEvent eventEventState.Event)
+                state, Cmd.ofMsg (RemoveItem itemState.Item)
         | None ->
             state, Cmd.none
-    | SaveAndLoadEventsMsg msg ->
-        match SaveAndLoadEvents.update msg state.SaveAndLoadEventsState with
-        | SaveAndLoadEvents.UpdateRes(state') ->
+    | SaveAndLoadMsg msg ->
+        match SaveAndLoad.update msg state.SaveAndLoadState with
+        | SaveAndLoad.UpdateRes(state') ->
             let state =
                 { state with
-                    SaveAndLoadEventsState = state'
+                    SaveAndLoadState = state'
                 }
             state, Cmd.none
-        | SaveAndLoadEvents.ImportResult(state', localItems) ->
+        | SaveAndLoad.ImportResult(state', localItems) ->
             let state, cmd = init localItems
             let state =
                 { state with
-                    SaveAndLoadEventsState = state'
+                    SaveAndLoadState = state'
                 }
             state, cmd
     | Export ->
         LocalItems.export state.LocalItems
-        |> saveToDisc "application/json" "events.json"
+        |> saveToDisc "application/json" "items.json"
 
         state, Cmd.none
 
@@ -174,23 +174,23 @@ let view (state: State) (dispatch: Msg -> unit) =
                 )
             ]
 
-            SaveAndLoadEvents.view state.SaveAndLoadEventsState (SaveAndLoadEventsMsg >> dispatch)
+            SaveAndLoad.view state.SaveAndLoadState (SaveAndLoadMsg >> dispatch)
         ]
 
         Html.div [
             Html.button [
                 prop.text "add"
                 prop.onClick (fun e ->
-                    dispatch StartNewEvent
+                    dispatch StartNewItem
                 )
             ]
         ]
         Html.div [
             yield!
-                state.Events
+                state.Items
                 |> Seq.sortByDescending (fun (KeyValue(dateTime, _)) -> dateTime)
                 |> Seq.map (fun (KeyValue(k, e)) ->
-                    ItemView.view e (fun msg -> EventViewMsg(k, msg) |> dispatch)
+                    ItemView.view e (fun msg -> ItemViewMsg(k, msg) |> dispatch)
                 )
         ]
     ]

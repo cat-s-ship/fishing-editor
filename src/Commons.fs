@@ -78,10 +78,10 @@ module Result =
 
 module Routes =
     [<Literal>]
-    let EventsListPageRoute = "EventsListPageRoute"
+    let ItemsListPageRoute = "ItemsListPageRoute"
 
     [<Literal>]
-    let EventsAdderPageRoute = "EventsAdderPageRoute"
+    let ItemAdderPageRoute = "ItemAdderPageRoute"
 
 open Browser
 open Browser.Types

@@ -1,4 +1,4 @@
-module EventAdder
+module ItemAdder
 open Elmish
 open Feliz
 

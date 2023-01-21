@@ -23,46 +23,46 @@ module LocalItems =
             Ok empty
         | res ->
             Json.Decode.Auto.fromString res
-            |> Result.map (fun events ->
+            |> Result.map (fun items ->
                 {
-                    Cache = events
+                    Cache = items
                 }
             )
 
     let import (rawJson: string) =
         Json.Decode.Auto.fromString rawJson
-        |> Result.map (fun events ->
-            Browser.WebStorage.localStorage.setItem (localKey, Json.Encode.Auto.toString events)
+        |> Result.map (fun items ->
+            Browser.WebStorage.localStorage.setItem (localKey, Json.Encode.Auto.toString items)
 
             {
-                Cache = events
+                Cache = items
             }
         )
 
-    let export (localEventsApi: LocalItems) =
-        localEventsApi.Cache
+    let export (localItemsApi: LocalItems) =
+        localItemsApi.Cache
         |> Json.Encode.Auto.toString
 
-    let set (event: Item) (localEventsApi: LocalItems) =
-        let events =
-            Map.add event.Id event localEventsApi.Cache
+    let set (item: Item) (localItemsApi: LocalItems) =
+        let items =
+            Map.add item.Id item localItemsApi.Cache
 
-        Browser.WebStorage.localStorage.setItem (localKey, Json.Encode.Auto.toString events)
+        Browser.WebStorage.localStorage.setItem (localKey, Json.Encode.Auto.toString items)
 
-        { localEventsApi with
-            Cache = events
+        { localItemsApi with
+            Cache = items
         }
 
-    let insert id fn (localEventsApi: LocalItems) =
-        let newEvent = Item.create id fn
-        set newEvent localEventsApi
+    let insert id fn (localItemsApi: LocalItems) =
+        let newItem = Item.create id fn
+        set newItem localItemsApi
 
-    let remove dateTime (localEventsApi: LocalItems) =
-        let events =
-            Map.remove dateTime localEventsApi.Cache
+    let remove dateTime (localItemsApi: LocalItems) =
+        let items =
+            Map.remove dateTime localItemsApi.Cache
 
-        Browser.WebStorage.localStorage.setItem (localKey, Json.Encode.Auto.toString events)
+        Browser.WebStorage.localStorage.setItem (localKey, Json.Encode.Auto.toString items)
 
-        { localEventsApi with
-            Cache = events
+        { localItemsApi with
+            Cache = items
         }

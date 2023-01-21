@@ -7,82 +7,82 @@ open Feliz.Router
 open Commons
 
 type Page =
-    | EventsListPage
-    | EventsAdderPage
+    | ItemsListPage
+    | ItemAdderPage
     | NotFoundPage of string
 
 type Msg =
     | ChangePage of Page
-    | EventsListMsg of EventsList.Msg
-    | EventsAdderMsg of EventAdder.Msg
+    | ItemsListMsg of ItemsList.Msg
+    | ItemsAdderMsg of ItemAdder.Msg
 
 type State =
     {
-        EventsListState: EventsList.State
+        ItemsListState: ItemsList.State
         CurrentPage: Page
-        EventsAdderState: EventAdder.State
+        ItemsAdderState: ItemAdder.State
     }
 
 let parseRoute currentUrl =
     match currentUrl with
-    | [] -> EventsListPage
-    | Routes.EventsListPageRoute::_ -> EventsListPage
-    | Routes.EventsAdderPageRoute::_ -> EventsAdderPage
+    | [] -> ItemsListPage
+    | Routes.ItemsListPageRoute::_ -> ItemsListPage
+    | Routes.ItemAdderPageRoute::_ -> ItemAdderPage
     | xs ->
         NotFoundPage (sprintf "%A" xs)
 
 let init rawRoute =
-    let eventsListState, eventsListMsg =
+    let itemsListState, itemsListMsg =
         Api.LocalItems.get()
         |> Result.defaultWith (fun errMsg ->
             failwithf "%s" errMsg // TODO
         )
-        |> EventsList.init
-    let eventsAdderState, eventsAdderMsg =
-        EventAdder.init ()
+        |> ItemsList.init
+    let itemsAdderState, itemsAdderMsg =
+        ItemAdder.init ()
     let state =
         {
             CurrentPage = parseRoute rawRoute
-            EventsListState = eventsListState
-            EventsAdderState = eventsAdderState
+            ItemsListState = itemsListState
+            ItemsAdderState = itemsAdderState
         }
     let msg =
         Cmd.batch [
-            eventsListMsg |> Cmd.map EventsListMsg
-            eventsAdderMsg |> Cmd.map EventsAdderMsg
+            itemsListMsg |> Cmd.map ItemsListMsg
+            itemsAdderMsg |> Cmd.map ItemsAdderMsg
         ]
     state, msg
 
 let update (msg: Msg) (state: State) =
     match msg with
-    | EventsListMsg msg ->
-        let state', msg = EventsList.update msg state.EventsListState
+    | ItemsListMsg msg ->
+        let state', msg = ItemsList.update msg state.ItemsListState
         let state =
             { state with
-                EventsListState = state'
+                ItemsListState = state'
             }
-        state, msg |> Cmd.map EventsListMsg
-    | EventsAdderMsg msg ->
-        match EventAdder.update msg state.EventsAdderState with
-        | EventAdder.UpdateRes (state', msg) ->
+        state, msg |> Cmd.map ItemsListMsg
+    | ItemsAdderMsg msg ->
+        match ItemAdder.update msg state.ItemsAdderState with
+        | ItemAdder.UpdateRes (state', msg) ->
             let state =
                 { state with
-                    EventsAdderState = state'
+                    ItemsAdderState = state'
                 }
-            state, msg |> Cmd.map EventsAdderMsg
-        | EventAdder.SubmitRes newEvent ->
+            state, msg |> Cmd.map ItemsAdderMsg
+        | ItemAdder.SubmitRes newItem ->
             let cmd =
-                Cmd.ofMsg (EventsList.SetEvent newEvent)
-                |> Cmd.map EventsListMsg
+                Cmd.ofMsg (ItemsList.SetItem newItem)
+                |> Cmd.map ItemsListMsg
             let cmd =
                 Cmd.batch [
                     cmd
-                    Cmd.navigate [| Routes.EventsListPageRoute |]
+                    Cmd.navigate [| Routes.ItemsListPageRoute |]
                 ]
             state, cmd
-        | EventAdder.CancelRes ->
+        | ItemAdder.CancelRes ->
             let cmd =
-                Cmd.navigate [| Routes.EventsListPageRoute |]
+                Cmd.navigate [| Routes.ItemsListPageRoute |]
             state, cmd
     | ChangePage page ->
         let state =
@@ -98,10 +98,10 @@ let router = React.functionComponent(fun () ->
         router.onUrlChanged (parseRoute >> ChangePage >> dispatch)
         router.children [
             match state.CurrentPage with
-            | EventsListPage ->
-                EventsList.view state.EventsListState (EventsListMsg >> dispatch)
-            | EventsAdderPage ->
-                EventAdder.view state.EventsAdderState (EventsAdderMsg >> dispatch)
+            | ItemsListPage ->
+                ItemsList.view state.ItemsListState (ItemsListMsg >> dispatch)
+            | ItemAdderPage ->
+                ItemAdder.view state.ItemsAdderState (ItemsAdderMsg >> dispatch)
             | NotFoundPage query ->
                 Html.h1 (sprintf "Not found %A" query)
         ]

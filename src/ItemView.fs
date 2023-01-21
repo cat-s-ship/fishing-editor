@@ -75,15 +75,15 @@ type Msg =
 
 type State =
     {
-        Event: Item
+        Item: Item
         DescripitionEditorState: DescripitionEditor.State Option
         IsStartedRemove: DescripitionEditor.State Option
     }
 
-let init arg =
+let init item =
     let state =
         {
-            Event = arg
+            Item = item
             DescripitionEditorState = None
             IsStartedRemove = None
         }
@@ -91,13 +91,13 @@ let init arg =
 
 type UpdateResult =
     | UpdateRes of State * Cmd<Msg>
-    | UpdateEventRes of Item
+    | UpdateItemRes of Item
     | RemoveRes
 
 let update (msg: Msg) (state: State) =
     match msg with
     | StartEdit ->
-        let state', msg = DescripitionEditor.init state.Event.Description
+        let state', msg = DescripitionEditor.init state.Item.Description
         let state =
             { state with
                 DescripitionEditorState = Some state'
@@ -116,10 +116,10 @@ let update (msg: Msg) (state: State) =
                 (state, msg |> Cmd.map DescripitionEditorMsg)
                 |> UpdateRes
             | DescripitionEditor.SubmitRes description ->
-                { state.Event with
+                { state.Item with
                     Description = description
                 }
-                |> UpdateEventRes
+                |> UpdateItemRes
             | DescripitionEditor.CancelRes ->
                 let state =
                     { state with
@@ -131,7 +131,7 @@ let update (msg: Msg) (state: State) =
             (state, Cmd.none)
             |> UpdateRes
     | StartRemove ->
-        let state', msg = DescripitionEditor.init state.Event.Description
+        let state', msg = DescripitionEditor.init state.Item.Description
         let state =
             { state with
                 IsStartedRemove = Some state'
@@ -165,7 +165,7 @@ let update (msg: Msg) (state: State) =
 let view (state: State) (dispatch: Msg -> unit) =
     Html.div [
         Html.div [
-            prop.textf "%A" state.Event
+            prop.textf "%A" state.Item
         ]
 
         match state.DescripitionEditorState with
@@ -173,7 +173,7 @@ let view (state: State) (dispatch: Msg -> unit) =
             DescripitionEditor.view true descriptionEditorState (DescripitionEditorMsg >> dispatch)
         | None ->
             Html.div [
-                prop.text state.Event.Description
+                prop.text state.Item.Description
             ]
 
             match state.IsStartedRemove with
