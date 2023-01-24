@@ -13,6 +13,7 @@
     <Compile Include="..\paket-files\gretmn102\DiaryWeb\src\Components\Download.fs" />
     <Compile Include="..\paket-files\gretmn102\DiaryWeb\src\Components\Upload.fs" />
     <Compile Include="..\paket-files\gretmn102\DiaryWeb\src\Components\DateTimeInput.fs" />
+    <Compile Include="Utils\ElmishExt.fs" />
     <Compile Include="Commons.fs" />
     <Compile Include="Api.fs" />
     <Compile Include="ItemAdder.fs" />
