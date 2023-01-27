@@ -9,18 +9,13 @@ module EditorWithStart =
     type Msg<'InitData, 'EditorMsg> =
         | StartEdit of 'InitData
         | EditorMsg of 'EditorMsg
+        | Submit of 'InitData
+        | Cancel
 
     type State<'EditorState> =
         {
             EditorState: 'EditorState option
         }
-
-    type UpdateResult2<'InitData, 'EditorState, 'EditorMsg> =
-        | UpdateRes2 of 'EditorState * Cmd<'EditorMsg>
-        | SubmitRes2 of 'InitData
-        | CancelRes2
-
-    type ComponentUpdate<'InitData, 'State, 'Cmd> = 'Cmd -> 'State -> UpdateResult2<'InitData, 'State, 'Cmd>
 
     let init () =
         {
@@ -36,7 +31,7 @@ module EditorWithStart =
 
     let update
         (editorInit: ComponentInit<'InitData, 'EditorState, 'EditorMsg>)
-        (editorUpdate: ComponentUpdate<'InitData, 'EditorState, 'EditorMsg>)
+        (editorUpdate: ComponentUpdate<'EditorState, 'EditorMsg>)
         (msg: Msg<'InitData, 'EditorMsg>)
         (state: State<'EditorState>) =
 
@@ -55,37 +50,16 @@ module EditorWithStart =
         | EditorMsg msg ->
             match state.EditorState with
             | Some descripitionEditorState ->
-                match editorUpdate msg descripitionEditorState with
-                | UpdateRes2(state', msg) ->
-                    let state =
-                        { state with
-                            EditorState = Some state'
-                        }
-                    {
-                        State = state
-                        Cmd = msg |> Cmd.map EditorMsg
-                        Submit = None
+                let state', msg = editorUpdate msg descripitionEditorState
+                let state =
+                    { state with
+                        EditorState = Some state'
                     }
-                | SubmitRes2 description ->
-                    let state =
-                        { state with
-                            EditorState = None
-                        }
-                    {
-                        State = state
-                        Cmd = Cmd.none
-                        Submit = Some description
-                    }
-                | CancelRes2 ->
-                    let state =
-                        { state with
-                            EditorState = None
-                        }
-                    {
-                        State = state
-                        Cmd = Cmd.none
-                        Submit = None
-                    }
+                {
+                    State = state
+                    Cmd = msg |> Cmd.map EditorMsg
+                    Submit = None
+                }
             | None ->
                 {
                     State = state
@@ -93,10 +67,52 @@ module EditorWithStart =
                     Submit = None
                 }
 
-    let view (editorView: ComponentView<'EditorState, 'EditorMsg>) getData (state: State<'EditorState>) (dispatch: Msg<'InitData, 'EditorMsg> -> unit) =
+        | Submit description ->
+            let state =
+                { state with
+                    EditorState = None
+                }
+            {
+                State = state
+                Cmd = Cmd.none
+                Submit = Some description
+            }
+        | Cancel ->
+            let state =
+                { state with
+                    EditorState = None
+                }
+            {
+                State = state
+                Cmd = Cmd.none
+                Submit = None
+            }
+
+    type Events<'Data> =
+        {
+            OnSubmit: 'Data -> unit
+            OnCancel: unit -> unit
+        }
+
+    type EditorView<'Data, 'State, 'Cmd> =
+        Events<'Data> -> 'State -> ('Cmd -> unit) -> ReactElement
+
+    let view
+        (editorView: EditorView<'InitData, 'EditorState, 'EditorMsg>)
+        getData
+        (state: State<'EditorState>)
+        (dispatch: Msg<'InitData, 'EditorMsg> -> unit) =
+
         match state.EditorState with
         | Some editorState ->
-            editorView editorState (EditorMsg >> dispatch)
+            let onSubmitAndOnCancel =
+                {
+                    OnSubmit = fun data ->
+                        Submit data |> dispatch
+                    OnCancel = fun () ->
+                        Cancel |> dispatch
+                }
+            editorView onSubmitAndOnCancel editorState (EditorMsg >> dispatch)
         | None ->
             let data = getData ()
             Html.span [
@@ -114,8 +130,6 @@ module EditorWithStart =
 module DescripitionEditor =
     type Msg =
         | SetDescription of string
-        | Submit
-        | Cancel
 
     type State =
         {
@@ -138,14 +152,9 @@ module DescripitionEditor =
                 { state with
                     Description = description
                 }
-            (state, Cmd.none)
-            |> EditorWithStart.UpdateRes2
-        | Submit ->
-            EditorWithStart.SubmitRes2 state.Description
-        | Cancel ->
-            EditorWithStart.CancelRes2
+            state, Cmd.none
 
-    let view isInputEnabled (state: State) (dispatch: Msg -> unit) =
+    let view isInputEnabled (events: EditorWithStart.Events<_>) (state: State) (dispatch: Msg -> unit) =
         Html.div [
             if isInputEnabled then
                 Html.input [
@@ -161,11 +170,11 @@ module DescripitionEditor =
 
             Html.div [
                 Html.button [
-                    prop.onClick (fun _ -> dispatch Submit)
+                    prop.onClick (fun _ -> events.OnSubmit state.Description)
                     prop.text "Submit"
                 ]
                 Html.button [
-                    prop.onClick (fun _ -> dispatch Cancel)
+                    prop.onClick (fun _ -> events.OnCancel ())
                     prop.text "Cancel"
                 ]
             ]
@@ -176,6 +185,8 @@ type Msg =
     | NameEditorMsg of EditorWithStart.Msg<DescripitionEditor.InitData, DescripitionEditor.Msg>
     | StartRemove
     | SetRemove of DescripitionEditor.Msg
+    | RemoveR
+    | CancelRemove
 
 type State =
     {
@@ -257,27 +268,25 @@ let update (msg: Msg) (state: State) =
     | SetRemove msg ->
         match state.IsStartedRemove with
         | Some descripitionEditorState ->
-            match DescripitionEditor.update msg descripitionEditorState with
-            | EditorWithStart.UpdateRes2(state', msg) ->
-                let state =
-                    { state with
-                        IsStartedRemove = Some state'
-                    }
-                (state, msg |> Cmd.map SetRemove)
-                |> UpdateRes
-            | EditorWithStart.SubmitRes2 _ ->
-                RemoveRes
-            | EditorWithStart.CancelRes2 ->
-                let state =
-                    { state with
-                        IsStartedRemove = None
-                    }
-                (state, Cmd.none)
-                |> UpdateRes
+            let state', msg =  DescripitionEditor.update msg descripitionEditorState
+            let state =
+                { state with
+                    IsStartedRemove = Some state'
+                }
+            (state, msg |> Cmd.map SetRemove)
+            |> UpdateRes
         | None ->
             (state, Cmd.none)
             |> UpdateRes
-
+    | RemoveR ->
+        RemoveRes
+    | CancelRemove ->
+        let state =
+            { state with
+                IsStartedRemove = None
+            }
+        (state, Cmd.none)
+        |> UpdateRes
 
 let view (state: State) (dispatch: Msg -> unit) =
     Html.div [
@@ -309,7 +318,18 @@ let view (state: State) (dispatch: Msg -> unit) =
 
         match state.IsStartedRemove with
         | Some descriptionEditorState ->
-            DescripitionEditor.view false descriptionEditorState (SetRemove >> dispatch)
+            let events =
+                {
+                    EditorWithStart.OnSubmit = fun data ->
+                        dispatch RemoveR
+                    EditorWithStart.OnCancel = fun () ->
+                        dispatch CancelRemove
+                }
+            DescripitionEditor.view
+                false
+                events
+                descriptionEditorState
+                (SetRemove >> dispatch)
         | None ->
             Html.button [
                 prop.text "Remove"
