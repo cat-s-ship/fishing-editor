@@ -62,18 +62,36 @@ let update (msg: Msg) (state: State) =
     | ItemViewMsg (dateTime, msg) ->
         match Map.tryFind dateTime state.Items with
         | Some itemState ->
-            match ItemView.update msg itemState with
-            | ItemView.UpdateRes(state', msg) ->
-                let state =
-                    { state with
-                        Items =
-                            Map.add dateTime state' state.Items
-                    }
-                state, msg |> Cmd.map (fun cmd -> ItemViewMsg(dateTime, cmd))
-            | ItemView.UpdateItemRes e ->
-                state, Cmd.ofMsg (SetItem e)
-            | ItemView.RemoveRes ->
-                state, Cmd.ofMsg (RemoveItem itemState.Item)
+            let state', cmd, event = ItemView.update msg itemState
+
+            let state =
+                { state with
+                    Items =
+                        Map.add dateTime state' state.Items
+                }
+            let cmd =
+                cmd |> Cmd.map (fun cmd -> ItemViewMsg(dateTime, cmd))
+
+            match event with
+            | Some x ->
+                match x with
+                | ItemView.UpdateItemRes e ->
+                    let cmd =
+                        Cmd.batch [
+                            cmd
+                            Cmd.ofMsg (SetItem e)
+                        ]
+                    state, cmd
+                | ItemView.RemoveRes ->
+                    let cmd =
+                        Cmd.batch [
+                            cmd
+                            Cmd.ofMsg (RemoveItem itemState.Item)
+                        ]
+                    state, cmd
+            | None ->
+                state, cmd
+
         | None ->
             state, Cmd.none
     | UploadElmishMsg msg ->

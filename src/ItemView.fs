@@ -201,8 +201,7 @@ let init item =
         }
     state
 
-type UpdateResult =
-    | UpdateRes of State * Cmd<Msg>
+type UpdateResultEvent =
     | UpdateItemRes of Item
     | RemoveRes
 
@@ -222,14 +221,19 @@ let update (msg: Msg) (state: State) =
                     DescripitionEditorState = state'
                 }
             let msg = cmd |> Cmd.map DescripitionEditorMsg
-            (state, msg)
-            |> UpdateRes
+            UpdateResult.create
+                state
+                msg
+                None
         | Some x ->
-            { state.Item with
-                Description = x
-            }
-            |> UpdateItemRes
-
+            let item =
+                { state.Item with
+                    Description = x
+                }
+            UpdateResult.create
+                state
+                Cmd.none
+                (Some <| UpdateItemRes item)
     | NameEditorMsg msg ->
         let state', cmd, submit =
             EditorWithStart.update
@@ -244,22 +248,30 @@ let update (msg: Msg) (state: State) =
                     NameEditorState = state'
                 }
             let msg = cmd |> Cmd.map NameEditorMsg
-            (state, msg)
-            |> UpdateRes
+            UpdateResult.create
+                state
+                msg
+                None
         | Some x ->
-            { state.Item with
-                Name = x
-            }
-            |> UpdateItemRes
+            let item =
+                { state.Item with
+                    Name = x
+                }
 
+            UpdateResult.create
+                state
+                Cmd.none
+                (Some <| UpdateItemRes item)
     | StartRemove ->
         let state', msg = DescripitionEditor.init state.Item.Description
         let state =
             { state with
                 IsStartedRemove = Some state'
             }
-        (state, msg |> Cmd.map SetRemove)
-        |> UpdateRes
+        UpdateResult.create
+            state
+            (msg |> Cmd.map SetRemove)
+            None
     | SetRemove msg ->
         match state.IsStartedRemove with
         | Some descripitionEditorState ->
@@ -268,20 +280,30 @@ let update (msg: Msg) (state: State) =
                 { state with
                     IsStartedRemove = Some state'
                 }
-            (state, msg |> Cmd.map SetRemove)
-            |> UpdateRes
+            UpdateResult.create
+                state
+                (msg |> Cmd.map SetRemove)
+                None
         | None ->
-            (state, Cmd.none)
-            |> UpdateRes
+            UpdateResult.create
+                state
+                Cmd.none
+                None
+
     | RemoveR ->
-        RemoveRes
+        UpdateResult.create
+            state
+            Cmd.none
+            (Some RemoveRes)
     | CancelRemove ->
         let state =
             { state with
                 IsStartedRemove = None
             }
-        (state, Cmd.none)
-        |> UpdateRes
+        UpdateResult.create
+            state
+            Cmd.none
+            None
 
 let view (state: State) (dispatch: Msg -> unit) =
     Html.div [
