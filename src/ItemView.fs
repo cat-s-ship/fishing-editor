@@ -181,6 +181,7 @@ type Msg =
     | DescripitionEditorMsg of EditorWithStart.Msg<DescripitionEditor.InitData, DescripitionEditor.Msg>
     | NameEditorMsg of EditorWithStart.Msg<DescripitionEditor.InitData, DescripitionEditor.Msg>
     | SetRemove of EditorWithStart.Msg<DescripitionEditor.InitData, DescripitionEditor.Msg>
+    | ImageUrlEditorMsg of EditorWithStart.Msg<DescripitionEditor.InitData, DescripitionEditor.Msg>
 
 type State =
     {
@@ -188,6 +189,7 @@ type State =
         NameEditorState: EditorWithStart.State<DescripitionEditor.State>
         DescripitionEditorState: EditorWithStart.State<DescripitionEditor.State>
         IsStartedRemove: EditorWithStart.State<DescripitionEditor.State>
+        ImageUrlEditorState: EditorWithStart.State<DescripitionEditor.State>
     }
 
 let init item =
@@ -197,6 +199,7 @@ let init item =
             NameEditorState = EditorWithStart.init ()
             DescripitionEditorState = EditorWithStart.init ()
             IsStartedRemove = EditorWithStart.init ()
+            ImageUrlEditorState = EditorWithStart.init ()
         }
     state
 
@@ -261,7 +264,38 @@ let update (msg: Msg) (state: State) =
                 state
                 Cmd.none
                 (Some <| UpdateItemRes item)
+    | ImageUrlEditorMsg msg ->
+        let state', cmd, submit =
+            EditorWithStart.update
+                DescripitionEditor.init
+                DescripitionEditor.update
+                msg
+                state.ImageUrlEditorState
+        match submit with
+        | None ->
+            let state =
+                { state with
+                    ImageUrlEditorState = state'
+                }
+            let msg = cmd |> Cmd.map ImageUrlEditorMsg
+            UpdateResult.create
+                state
+                msg
+                None
+        | Some url ->
+            let item =
+                { state.Item with
+                    ImageUrl =
+                        if System.String.IsNullOrEmpty url then
+                            None
+                        else
+                            Some url
+                }
 
+            UpdateResult.create
+                state
+                Cmd.none
+                (Some <| UpdateItemRes item)
     | SetRemove msg ->
         let state', msg, res =
             EditorWithStart.update
@@ -322,4 +356,28 @@ let view (state: State) (dispatch: Msg -> unit) =
             (fun () -> "")
             state.IsStartedRemove
             (SetRemove >> dispatch)
+
+        Html.div [
+            Html.span [
+                prop.text "Image:"
+            ]
+            match state.Item.ImageUrl with
+            | Some src ->
+                Html.img [
+                    prop.src src
+                    prop.width 100
+                ]
+            | None ->
+                Html.div [ prop.text "None" ]
+
+            EditorWithStart.view
+                "Edit"
+                (DescripitionEditor.view true)
+                (fun () ->
+                    state.Item.ImageUrl
+                    |> Option.defaultValue ""
+                )
+                state.ImageUrlEditorState
+                (ImageUrlEditorMsg >> dispatch)
+        ]
     ]
