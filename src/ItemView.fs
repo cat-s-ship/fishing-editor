@@ -9,8 +9,6 @@ module EditorWithStart =
     type Msg<'InitData, 'EditorMsg> =
         | StartEdit of 'InitData
         | EditorMsg of 'EditorMsg
-        | Submit of 'InitData
-        | Cancel
 
     type State<'EditorState> =
         {
@@ -22,9 +20,13 @@ module EditorWithStart =
             EditorState = None
         }
 
+    type EditorResult<'Data> =
+        | Submit of 'Data
+        | Cancel
+
     let update
         (editorInit: ComponentInit<'InitData, 'EditorState, 'EditorMsg>)
-        (editorUpdate: ComponentUpdate<'EditorState, 'EditorMsg, unit>)
+        (editorUpdate: ComponentUpdate<'EditorState, 'EditorMsg, EditorResult<'InitData>>)
         (msg: Msg<'InitData, 'EditorMsg>)
         (state: State<'EditorState>) =
 
@@ -43,42 +45,38 @@ module EditorWithStart =
         | EditorMsg msg ->
             match state.EditorState with
             | Some descripitionEditorState ->
-                let state', msg, _ = editorUpdate msg descripitionEditorState
-                let state =
-                    { state with
-                        EditorState = Some state'
-                    }
-
-                UpdateResult.create
-                    state
-                    (msg |> Cmd.map EditorMsg)
-                    None
-
+                let state', msg, res = editorUpdate msg descripitionEditorState
+                match res with
+                | None ->
+                    let state =
+                        { state with
+                            EditorState = Some state'
+                        }
+                    UpdateResult.create
+                        state
+                        (msg |> Cmd.map EditorMsg)
+                        None
+                | Some res ->
+                    let state =
+                        { state with
+                            EditorState = None
+                        }
+                    match res with
+                    | Submit x ->
+                        UpdateResult.create
+                            state
+                            (msg |> Cmd.map EditorMsg)
+                            (Some x)
+                    | Cancel ->
+                        UpdateResult.create
+                            state
+                            (msg |> Cmd.map EditorMsg)
+                            None
             | None ->
                 UpdateResult.create
                     state
                     Cmd.none
                     None
-        | Submit description ->
-            let state =
-                { state with
-                    EditorState = None
-                }
-
-            UpdateResult.create
-                state
-                Cmd.none
-                (Some description)
-        | Cancel ->
-            let state =
-                { state with
-                    EditorState = None
-                }
-
-            UpdateResult.create
-                state
-                Cmd.none
-                None
 
     type Events<'Data> =
         {
@@ -86,25 +84,16 @@ module EditorWithStart =
             OnCancel: unit -> unit
         }
 
-    type EditorView<'Data, 'State, 'Cmd> =
-        Events<'Data> -> 'State -> ('Cmd -> unit) -> ReactElement
-
     let view
-        (editorView: EditorView<'InitData, 'EditorState, 'EditorMsg>)
+        (text: string)
+        (editorView: ComponentView<'EditorState, 'EditorMsg>)
         getData
         (state: State<'EditorState>)
         (dispatch: Msg<'InitData, 'EditorMsg> -> unit) =
 
         match state.EditorState with
         | Some editorState ->
-            let onSubmitAndOnCancel =
-                {
-                    OnSubmit = fun data ->
-                        Submit data |> dispatch
-                    OnCancel = fun () ->
-                        Cancel |> dispatch
-                }
-            editorView onSubmitAndOnCancel editorState (EditorMsg >> dispatch)
+            editorView editorState (EditorMsg >> dispatch)
         | None ->
             let data = getData ()
             Html.span [
@@ -112,7 +101,7 @@ module EditorWithStart =
                     prop.textf "%A" data
                 ]
                 Html.button [
-                    prop.text "Edit"
+                    prop.text text
                     prop.onClick (fun _ ->
                         dispatch (StartEdit data)
                     )
@@ -122,6 +111,8 @@ module EditorWithStart =
 module DescripitionEditor =
     type Msg =
         | SetDescription of string
+        | Submit
+        | Cancel
 
     type State =
         {
@@ -148,8 +139,19 @@ module DescripitionEditor =
                 state
                 Cmd.none
                 None
+        | Submit ->
+            UpdateResult.create
+                state
+                Cmd.none
+                (Some (EditorWithStart.Submit state.Description))
 
-    let view isInputEnabled (events: EditorWithStart.Events<_>) (state: State) (dispatch: Msg -> unit) =
+        | Cancel ->
+            UpdateResult.create
+                state
+                Cmd.none
+                (Some EditorWithStart.Cancel)
+
+    let view isInputEnabled (state: State) (dispatch: Msg -> unit) =
         Html.div [
             if isInputEnabled then
                 Html.input [
@@ -165,11 +167,11 @@ module DescripitionEditor =
 
             Html.div [
                 Html.button [
-                    prop.onClick (fun _ -> events.OnSubmit state.Description)
+                    prop.onClick (fun _ -> dispatch Submit)
                     prop.text "Submit"
                 ]
                 Html.button [
-                    prop.onClick (fun _ -> events.OnCancel ())
+                    prop.onClick (fun _ -> dispatch Cancel)
                     prop.text "Cancel"
                 ]
             ]
@@ -178,17 +180,14 @@ module DescripitionEditor =
 type Msg =
     | DescripitionEditorMsg of EditorWithStart.Msg<DescripitionEditor.InitData, DescripitionEditor.Msg>
     | NameEditorMsg of EditorWithStart.Msg<DescripitionEditor.InitData, DescripitionEditor.Msg>
-    | StartRemove
-    | SetRemove of DescripitionEditor.Msg
-    | RemoveR
-    | CancelRemove
+    | SetRemove of EditorWithStart.Msg<DescripitionEditor.InitData, DescripitionEditor.Msg>
 
 type State =
     {
         Item: Item
         NameEditorState: EditorWithStart.State<DescripitionEditor.State>
         DescripitionEditorState: EditorWithStart.State<DescripitionEditor.State>
-        IsStartedRemove: DescripitionEditor.State Option
+        IsStartedRemove: EditorWithStart.State<DescripitionEditor.State>
     }
 
 let init item =
@@ -197,7 +196,7 @@ let init item =
             Item = item
             NameEditorState = EditorWithStart.init ()
             DescripitionEditorState = EditorWithStart.init ()
-            IsStartedRemove = None
+            IsStartedRemove = EditorWithStart.init ()
         }
     state
 
@@ -262,48 +261,30 @@ let update (msg: Msg) (state: State) =
                 state
                 Cmd.none
                 (Some <| UpdateItemRes item)
-    | StartRemove ->
-        let state', msg = DescripitionEditor.init state.Item.Description
+
+    | SetRemove msg ->
+        let state', msg, res =
+            EditorWithStart.update
+                DescripitionEditor.init
+                DescripitionEditor.update
+                msg
+                state.IsStartedRemove
+
         let state =
             { state with
-                IsStartedRemove = Some state'
+                IsStartedRemove = state'
             }
-        UpdateResult.create
-            state
-            (msg |> Cmd.map SetRemove)
-            None
-    | SetRemove msg ->
-        match state.IsStartedRemove with
-        | Some descripitionEditorState ->
-            let state', msg, _ =  DescripitionEditor.update msg descripitionEditorState
-            let state =
-                { state with
-                    IsStartedRemove = Some state'
-                }
+        match res with
+        | None ->
             UpdateResult.create
                 state
                 (msg |> Cmd.map SetRemove)
                 None
-        | None ->
+        | Some description ->
             UpdateResult.create
                 state
                 Cmd.none
-                None
-
-    | RemoveR ->
-        UpdateResult.create
-            state
-            Cmd.none
-            (Some RemoveRes)
-    | CancelRemove ->
-        let state =
-            { state with
-                IsStartedRemove = None
-            }
-        UpdateResult.create
-            state
-            Cmd.none
-            None
+                (Some RemoveRes)
 
 let view (state: State) (dispatch: Msg -> unit) =
     Html.div [
@@ -316,6 +297,7 @@ let view (state: State) (dispatch: Msg -> unit) =
                 prop.text "Name:"
             ]
             EditorWithStart.view
+                "Edit"
                 (DescripitionEditor.view true)
                 (fun () -> state.Item.Name)
                 state.NameEditorState
@@ -327,31 +309,17 @@ let view (state: State) (dispatch: Msg -> unit) =
                 prop.text "Description:"
             ]
             EditorWithStart.view
+                "Edit"
                 (DescripitionEditor.view true)
                 (fun () -> state.Item.Description)
                 state.DescripitionEditorState
                 (DescripitionEditorMsg >> dispatch)
         ]
 
-        match state.IsStartedRemove with
-        | Some descriptionEditorState ->
-            let events =
-                {
-                    EditorWithStart.OnSubmit = fun data ->
-                        dispatch RemoveR
-                    EditorWithStart.OnCancel = fun () ->
-                        dispatch CancelRemove
-                }
-            DescripitionEditor.view
-                false
-                events
-                descriptionEditorState
-                (SetRemove >> dispatch)
-        | None ->
-            Html.button [
-                prop.text "Remove"
-                prop.onClick (fun _ ->
-                    dispatch StartRemove
-                )
-            ]
+        EditorWithStart.view
+            "Remove"
+            (DescripitionEditor.view false)
+            (fun () -> "")
+            state.IsStartedRemove
+            (SetRemove >> dispatch)
     ]
