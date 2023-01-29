@@ -22,16 +22,9 @@ module EditorWithStart =
             EditorState = None
         }
 
-    type UpdateResult<'InitData, 'EditorState, 'EditorMsg> =
-        {
-            State: State<'EditorState>
-            Cmd: Cmd<Msg<'InitData, 'EditorMsg>>
-            Submit: 'InitData option
-        }
-
     let update
         (editorInit: ComponentInit<'InitData, 'EditorState, 'EditorMsg>)
-        (editorUpdate: ComponentUpdate<'EditorState, 'EditorMsg>)
+        (editorUpdate: ComponentUpdate<'EditorState, 'EditorMsg, unit>)
         (msg: Msg<'InitData, 'EditorMsg>)
         (state: State<'EditorState>) =
 
@@ -42,51 +35,50 @@ module EditorWithStart =
                 { state with
                     EditorState = Some state'
                 }
-            {
-                State = state
-                Cmd = msg |> Cmd.map EditorMsg
-                Submit = None
-            }
+
+            UpdateResult.create
+                state
+                (msg |> Cmd.map EditorMsg)
+                None
         | EditorMsg msg ->
             match state.EditorState with
             | Some descripitionEditorState ->
-                let state', msg = editorUpdate msg descripitionEditorState
+                let state', msg, _ = editorUpdate msg descripitionEditorState
                 let state =
                     { state with
                         EditorState = Some state'
                     }
-                {
-                    State = state
-                    Cmd = msg |> Cmd.map EditorMsg
-                    Submit = None
-                }
-            | None ->
-                {
-                    State = state
-                    Cmd = Cmd.none
-                    Submit = None
-                }
 
+                UpdateResult.create
+                    state
+                    (msg |> Cmd.map EditorMsg)
+                    None
+
+            | None ->
+                UpdateResult.create
+                    state
+                    Cmd.none
+                    None
         | Submit description ->
             let state =
                 { state with
                     EditorState = None
                 }
-            {
-                State = state
-                Cmd = Cmd.none
-                Submit = Some description
-            }
+
+            UpdateResult.create
+                state
+                Cmd.none
+                (Some description)
         | Cancel ->
             let state =
                 { state with
                     EditorState = None
                 }
-            {
-                State = state
-                Cmd = Cmd.none
-                Submit = None
-            }
+
+            UpdateResult.create
+                state
+                Cmd.none
+                None
 
     type Events<'Data> =
         {
@@ -152,7 +144,10 @@ module DescripitionEditor =
                 { state with
                     Description = description
                 }
-            state, Cmd.none
+            UpdateResult.create
+                state
+                Cmd.none
+                None
 
     let view isInputEnabled (events: EditorWithStart.Events<_>) (state: State) (dispatch: Msg -> unit) =
         Html.div [
@@ -214,19 +209,19 @@ type UpdateResult =
 let update (msg: Msg) (state: State) =
     match msg with
     | DescripitionEditorMsg msg ->
-        let res =
+        let state', cmd, submit =
             EditorWithStart.update
                 DescripitionEditor.init
                 DescripitionEditor.update
                 msg
                 state.DescripitionEditorState
-        match res.Submit with
+        match submit with
         | None ->
             let state =
                 { state with
-                    DescripitionEditorState = res.State
+                    DescripitionEditorState = state'
                 }
-            let msg = res.Cmd |> Cmd.map DescripitionEditorMsg
+            let msg = cmd |> Cmd.map DescripitionEditorMsg
             (state, msg)
             |> UpdateRes
         | Some x ->
@@ -236,19 +231,19 @@ let update (msg: Msg) (state: State) =
             |> UpdateItemRes
 
     | NameEditorMsg msg ->
-        let res =
+        let state', cmd, submit =
             EditorWithStart.update
                 DescripitionEditor.init
                 DescripitionEditor.update
                 msg
                 state.NameEditorState
-        match res.Submit with
+        match submit with
         | None ->
             let state =
                 { state with
-                    NameEditorState = res.State
+                    NameEditorState = state'
                 }
-            let msg = res.Cmd |> Cmd.map NameEditorMsg
+            let msg = cmd |> Cmd.map NameEditorMsg
             (state, msg)
             |> UpdateRes
         | Some x ->
@@ -268,7 +263,7 @@ let update (msg: Msg) (state: State) =
     | SetRemove msg ->
         match state.IsStartedRemove with
         | Some descripitionEditorState ->
-            let state', msg =  DescripitionEditor.update msg descripitionEditorState
+            let state', msg, _ =  DescripitionEditor.update msg descripitionEditorState
             let state =
                 { state with
                     IsStartedRemove = Some state'
