@@ -22,29 +22,40 @@ type State =
     }
 
 let init localItems =
+    let items, cmd =
+        localItems.Cache
+        |> Seq.mapFold
+            (fun m (KeyValue(itemId, item)) ->
+                let get itemId =
+                    match LocalItems.get itemId localItems with
+                    | Some item -> Ok item
+                    | None -> Error (sprintf "%A not found" itemId)
+
+                let state, cmd = ItemView.init get item
+                let m = Map.add itemId state m
+                cmd |> Cmd.map (fun cmd -> ItemViewMsg (itemId, cmd)), m
+            )
+            Map.empty
+        |> fun (cmds, state) ->
+            state, Cmd.batch cmds
+
     let state =
         {
             LocalItems = localItems
-            Items =
-                localItems.Cache
-                |> Map.map (fun _ e ->
-                    ItemView.init e
-                )
+            Items = items
             UploadElmishState =
                 Upload.Elmish.init
         }
-    state, Cmd.none
+    state, cmd
 
 let update (msg: Msg) (state: State) =
     match msg with
-    | SetItem e ->
+    | SetItem item ->
         let state =
             { state with
                 LocalItems =
                     state.LocalItems
-                    |> LocalItems.set e
-                Items =
-                    Map.add e.Id (ItemView.init e) state.Items
+                    |> LocalItems.set item
             }
         state, Cmd.none
     | RemoveItem e ->
@@ -53,24 +64,27 @@ let update (msg: Msg) (state: State) =
                 LocalItems =
                     state.LocalItems
                     |> LocalItems.remove e.Id
-                Items =
-                    Map.remove e.Id state.Items
             }
         state, Cmd.none
     | StartNewItem ->
         state, Cmd.navigate [| Routes.ItemAdderPageRoute |]
-    | ItemViewMsg (dateTime, msg) ->
-        match Map.tryFind dateTime state.Items with
+    | ItemViewMsg (itemId, msg) ->
+        match Map.tryFind itemId state.Items with
         | Some itemState ->
-            let state', cmd, event = ItemView.update msg itemState
+            let getAllItems () =
+                state.LocalItems.Cache
+                |> Seq.map (fun (KeyValue(_, item)) -> item)
+                |> Array.ofSeq
+
+            let state', cmd, event = ItemView.update getAllItems msg itemState
 
             let state =
                 { state with
                     Items =
-                        Map.add dateTime state' state.Items
+                        Map.add itemId state' state.Items
                 }
             let cmd =
-                cmd |> Cmd.map (fun cmd -> ItemViewMsg(dateTime, cmd))
+                cmd |> Cmd.map (fun cmd -> ItemViewMsg(itemId, cmd))
 
             match event with
             | Some x ->
@@ -83,6 +97,12 @@ let update (msg: Msg) (state: State) =
                         ]
                     state, cmd
                 | ItemView.RemoveRes ->
+                    let state =
+                        { state with
+                            Items =
+                                Map.remove itemId state.Items
+                        }
+
                     let cmd =
                         Cmd.batch [
                             cmd

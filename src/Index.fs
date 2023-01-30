@@ -34,7 +34,7 @@ let parseRoute currentUrl =
 
 let init rawRoute =
     let itemsListState, itemsListMsg =
-        Api.LocalItems.get()
+        Api.LocalItems.load ()
         |> Result.defaultWith (fun errMsg ->
             failwithf "%s" errMsg // TODO
         )

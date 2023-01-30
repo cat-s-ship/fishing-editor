@@ -17,7 +17,7 @@ module LocalItems =
             Cache = Map.empty
         }
 
-    let get () : Result<LocalItems, string> =
+    let load () : Result<LocalItems, string> =
         match Browser.WebStorage.localStorage.getItem localKey with
         | null ->
             Ok empty
@@ -42,6 +42,10 @@ module LocalItems =
     let export (localItemsApi: LocalItems) =
         localItemsApi.Cache
         |> Json.Encode.Auto.toString
+
+    let get (itemId: ItemId) (localItemsApi: LocalItems) =
+        localItemsApi.Cache
+        |> Map.tryFind itemId
 
     let set (item: Item) (localItemsApi: LocalItems) =
         let items =
