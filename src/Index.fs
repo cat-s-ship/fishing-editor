@@ -64,6 +64,9 @@ let update (msg: Msg) (state: State) =
             }
         state, msg |> Cmd.map ItemsListMsg
     | ItemsAdderMsg msg ->
+        let navigateToItemsListPage () =
+            Cmd.navigate(Routes.ItemsListPageRoute, HistoryMode.ReplaceState)
+
         match ItemAdder.update msg state.ItemsAdderState with
         | ItemAdder.UpdateRes (state', msg) ->
             let state =
@@ -78,12 +81,13 @@ let update (msg: Msg) (state: State) =
             let cmd =
                 Cmd.batch [
                     cmd
-                    Cmd.navigate [| Routes.ItemsListPageRoute |]
+                    navigateToItemsListPage ()
                 ]
             state, cmd
         | ItemAdder.CancelRes ->
             let cmd =
-                Cmd.navigate [| Routes.ItemsListPageRoute |]
+                navigateToItemsListPage ()
+
             state, cmd
     | ChangePage page ->
         let state =
