@@ -421,7 +421,15 @@ module LootView =
 
             | Some lootEditorState ->
                 Html.div [
-                    LootEditor.view lootEditorState (LootEditorMsg >> dispatch)
+                    Html.div [
+                        prop.style [
+                            style.maxHeight 300
+                            style.overflowY.auto
+                        ]
+                        prop.children [
+                            LootEditor.view lootEditorState (LootEditorMsg >> dispatch)
+                        ]
+                    ]
 
                     Html.button [
                         prop.text "Готово"
