@@ -17,31 +17,31 @@ module LocalItems =
             Cache = Map.empty
         }
 
-    let load () : Result<LocalItems, string> =
-        match Browser.WebStorage.localStorage.getItem localKey with
-        | null ->
-            Ok empty
-        | res ->
-            Json.Decode.Auto.fromString res
-            |> Result.map (fun items ->
-                {
-                    Cache = items
-                }
-            )
-
-    let import (rawJson: string) =
-        Json.Decode.Auto.fromString rawJson
+    let decode rawJson =
+        Json.Decode.fromString Items.decoder rawJson
         |> Result.map (fun items ->
-            Browser.WebStorage.localStorage.setItem (localKey, Json.Encode.Auto.toString items)
-
             {
                 Cache = items
             }
         )
 
+    let load () : Result<LocalItems, string> =
+        match Browser.WebStorage.localStorage.getItem localKey with
+        | null ->
+            Ok empty
+        | res ->
+            decode res
+
+    let import (rawJson: string) =
+        decode rawJson
+        |> Result.map (fun localItems ->
+            Browser.WebStorage.localStorage.setItem (localKey, Items.encode localItems.Cache)
+
+            localItems
+        )
+
     let export (localItemsApi: LocalItems) =
-        localItemsApi.Cache
-        |> Json.Encode.Auto.toString
+        Items.encode localItemsApi.Cache
 
     let get (itemId: ItemId) (localItemsApi: LocalItems) =
         localItemsApi.Cache
@@ -51,7 +51,7 @@ module LocalItems =
         let items =
             Map.add item.Id item localItemsApi.Cache
 
-        Browser.WebStorage.localStorage.setItem (localKey, Json.Encode.Auto.toString items)
+        Browser.WebStorage.localStorage.setItem (localKey, Items.encode items)
 
         { localItemsApi with
             Cache = items
@@ -65,7 +65,7 @@ module LocalItems =
         let items =
             Map.remove dateTime localItemsApi.Cache
 
-        Browser.WebStorage.localStorage.setItem (localKey, Json.Encode.Auto.toString items)
+        Browser.WebStorage.localStorage.setItem (localKey, Items.encode items)
 
         { localItemsApi with
             Cache = items
