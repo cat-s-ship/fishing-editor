@@ -550,6 +550,7 @@ type Msg =
     | SetRemove of EditorWithStart.Msg<DescripitionEditor.InitData, DescripitionEditor.Msg>
     | ImageUrlEditorMsg of EditorWithStart.Msg<DescripitionEditor.InitData, DescripitionEditor.Msg>
     | AsBaitMsg of OptionalLootView.Msg
+    | AsChestMsg of OptionalLootView.Msg
 
 type State =
     {
@@ -559,13 +560,14 @@ type State =
         IsStartedRemove: EditorWithStart.State<DescripitionEditor.State> // TODO: refact
         ImageUrlEditorState: EditorWithStart.State<DescripitionEditor.State>
         AsBaitState: OptionalLootView.State
+        AsChestState: OptionalLootView.State
     }
 
 let init getItem (item: Item) =
     let asBaitState, cmd = OptionalLootView.init getItem item.AsBait
-    let cmd =
-        cmd
-        |> Cmd.map AsBaitMsg
+    let cmd1 = cmd |> Cmd.map AsBaitMsg
+    let asChestState, cmd = OptionalLootView.init getItem item.AsChest
+    let cmd2 = cmd |> Cmd.map AsChestMsg
 
     let state =
         {
@@ -575,8 +577,13 @@ let init getItem (item: Item) =
             IsStartedRemove = EditorWithStart.init ()
             ImageUrlEditorState = EditorWithStart.init ()
             AsBaitState = asBaitState
+            AsChestState = asChestState
         }
-
+    let cmd =
+        Cmd.batch [
+            cmd1
+            cmd2
+        ]
     state, cmd
 
 type UpdateResultEvent =
@@ -729,6 +736,29 @@ let update getItem getAllItems (msg: Msg) (state: State) =
                     (Some <| UpdateItemRes item)
         | None ->
             UpdateResult.create state cmd None
+    | AsChestMsg msg ->
+        let state', cmd, res = OptionalLootView.update getItem getAllItems msg state.AsChestState
+        let state =
+            { state with
+                AsChestState = state'
+            }
+        let cmd = cmd |> Cmd.map AsChestMsg
+        match res with
+        | Some res ->
+            match res with
+            | OptionalLootView.UpdateLoot loot ->
+                let item =
+                    { state.Item with AsChest = loot }
+                let state =
+                    { state with
+                        Item = item
+                    }
+                UpdateResult.create
+                    state
+                    cmd
+                    (Some <| UpdateItemRes item)
+        | None ->
+            UpdateResult.create state cmd None
 
 let view (state: State) (dispatch: Msg -> unit) =
     Html.div [
@@ -796,5 +826,12 @@ let view (state: State) (dispatch: Msg -> unit) =
                 prop.text "Bait on:"
             ]
             OptionalLootView.view state.AsBaitState (AsBaitMsg >> dispatch)
+        ]
+
+        Html.div [
+            Html.div [
+                prop.text "Chest contains:"
+            ]
+            OptionalLootView.view state.AsChestState (AsChestMsg >> dispatch)
         ]
     ]
