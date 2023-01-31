@@ -21,17 +21,18 @@ type State =
         UploadElmishState: Upload.Elmish.State<LocalItems>
     }
 
+module LocalItems =
+    let get itemId localItems =
+        match LocalItems.get itemId localItems with
+        | Some item -> Ok item
+        | None -> Error (sprintf "%A not found" itemId)
+
 let init localItems =
     let items, cmd =
         localItems.Cache
         |> Seq.mapFold
             (fun m (KeyValue(itemId, item)) ->
-                let get itemId =
-                    match LocalItems.get itemId localItems with
-                    | Some item -> Ok item
-                    | None -> Error (sprintf "%A not found" itemId)
-
-                let state, cmd = ItemView.init get item
+                let state, cmd = ItemView.init (fun itemId -> LocalItems.get itemId localItems) item
                 let m = Map.add itemId state m
                 cmd |> Cmd.map (fun cmd -> ItemViewMsg (itemId, cmd)), m
             )
@@ -75,8 +76,9 @@ let update (msg: Msg) (state: State) =
                 state.LocalItems.Cache
                 |> Seq.map (fun (KeyValue(_, item)) -> item)
                 |> Array.ofSeq
-
-            let state', cmd, event = ItemView.update getAllItems msg itemState
+            let getItem itemId =
+                LocalItems.get itemId state.LocalItems
+            let state', cmd, event = ItemView.update getItem getAllItems msg itemState
 
             let state =
                 { state with

@@ -282,6 +282,13 @@ module LootView =
             Loot: Map<ItemId, Deferred<Result<Item, string>>>
             LootEditorState: LootEditor.State option
         }
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    [<RequireQualifiedAccess>]
+    module State =
+        let getLoot (state: State) =
+            state.Loot
+            |> Seq.map (fun (KeyValue(itemId, _)) -> itemId)
+            |> Array.ofSeq
 
     let init getItem (loot: Commons.Loot) =
         let state =
@@ -358,7 +365,7 @@ module LootView =
             let state', cmd =
                 LootEditor.init
                     getAllItems
-                    (state.Loot |> Seq.map (fun (KeyValue(itemId, _)) -> itemId) |> Array.ofSeq)
+                    (State.getLoot state)
             let state =
                 { state with
                     LootEditorState = Some state'
@@ -428,12 +435,121 @@ module LootView =
                 ]
         ]
 
+module OptionalLootView =
+    open Components.Utils
+
+    type Msg =
+        | LootViewMsg of LootView.Msg
+        | SwitchEnabled
+
+    type State =
+        {
+            IsEnable: bool
+            LootViewState: LootView.State option
+        }
+
+    let init getItem (loot: Commons.Loot option) =
+        match loot with
+        | Some loot ->
+            let lootViewState, cmd = LootView.init getItem loot
+            let cmd =
+                cmd
+                |> Cmd.map LootViewMsg
+            let state =
+                {
+                    IsEnable = true
+                    LootViewState = Some lootViewState
+                }
+            state, cmd
+        | None ->
+            let state =
+                {
+                    IsEnable = false
+                    LootViewState = None
+                }
+            state, Cmd.none
+
+    type UpdateResultEvent =
+        | UpdateLoot of Loot option
+
+    let update getItem getAllItems (msg: Msg) (state: State) =
+        match msg with
+        | LootViewMsg msg ->
+            match state.LootViewState with
+            | Some lootViewState ->
+                let state', cmd, res = LootView.update getAllItems msg lootViewState
+                let state =
+                    { state with
+                        LootViewState = Some state'
+                    }
+                let res =
+                    match res with
+                    | Some (LootView.UpdateLoot loot) ->
+                        Some (UpdateLoot (Some loot))
+                    | None ->
+                        None
+                UpdateResult.create
+                    state
+                    (cmd |> Cmd.map LootViewMsg)
+                    res
+            | None ->
+                UpdateResult.create state Cmd.none None
+        | SwitchEnabled ->
+            let isEnabled = state.IsEnable
+            let state =
+                { state with
+                    IsEnable = not state.IsEnable
+                }
+            if isEnabled then
+                UpdateResult.create
+                    state
+                    Cmd.none
+                    (Some (UpdateLoot None))
+            else
+                match state.LootViewState with
+                | Some lootViewState ->
+                    UpdateResult.create
+                        state
+                        Cmd.none
+                        (Some (UpdateLoot (Some (LootView.State.getLoot lootViewState))))
+                | None ->
+                    let lootViewState, cmd = LootView.init getItem [||]
+                    let cmd =
+                        cmd
+                        |> Cmd.map LootViewMsg
+
+                    let state =
+                        { state with
+                            LootViewState =
+                                Some lootViewState
+                        }
+                    UpdateResult.create
+                        state
+                        cmd
+                        None
+
+    let view (state: State) (dispatch: Msg -> unit) =
+        Html.div [
+            Html.input [
+                prop.type' "checkbox"
+                prop.isChecked state.IsEnable
+                prop.onClick (fun _ ->
+                    dispatch SwitchEnabled
+                )
+            ]
+            if state.IsEnable then
+                match state.LootViewState with
+                | Some lootViewState ->
+                    LootView.view lootViewState (LootViewMsg >> dispatch)
+                | None -> ()
+        ]
+
 type Msg =
     | DescripitionEditorMsg of EditorWithStart.Msg<DescripitionEditor.InitData, DescripitionEditor.Msg>
     | NameEditorMsg of EditorWithStart.Msg<DescripitionEditor.InitData, DescripitionEditor.Msg>
     | SetRemove of EditorWithStart.Msg<DescripitionEditor.InitData, DescripitionEditor.Msg>
     | ImageUrlEditorMsg of EditorWithStart.Msg<DescripitionEditor.InitData, DescripitionEditor.Msg>
-    | AsBaitMsg of LootView.Msg
+    | AsBaitMsg of OptionalLootView.Msg
 
 type State =
     {
@@ -442,11 +558,11 @@ type State =
         DescripitionEditorState: EditorWithStart.State<DescripitionEditor.State>
         IsStartedRemove: EditorWithStart.State<DescripitionEditor.State> // TODO: refact
         ImageUrlEditorState: EditorWithStart.State<DescripitionEditor.State>
-        AsBaitState: LootView.State
+        AsBaitState: OptionalLootView.State
     }
 
 let init getItem (item: Item) =
-    let asBaitState, cmd = LootView.init getItem (item.AsBait |> Option.defaultValue [||])
+    let asBaitState, cmd = OptionalLootView.init getItem item.AsBait
     let cmd =
         cmd
         |> Cmd.map AsBaitMsg
@@ -467,7 +583,7 @@ type UpdateResultEvent =
     | UpdateItemRes of Item
     | RemoveRes
 
-let update getAllItems (msg: Msg) (state: State) =
+let update getItem getAllItems (msg: Msg) (state: State) =
     match msg with
     | DescripitionEditorMsg msg ->
         let state', cmd, submit =
@@ -591,7 +707,7 @@ let update getAllItems (msg: Msg) (state: State) =
                 (Some RemoveRes)
 
     | AsBaitMsg msg ->
-        let state', cmd, res = LootView.update getAllItems msg state.AsBaitState
+        let state', cmd, res = OptionalLootView.update getItem getAllItems msg state.AsBaitState
         let state =
             { state with
                 AsBaitState = state'
@@ -600,9 +716,9 @@ let update getAllItems (msg: Msg) (state: State) =
         match res with
         | Some res ->
             match res with
-            | LootView.UpdateLoot loot ->
+            | OptionalLootView.UpdateLoot loot ->
                 let item =
-                    { state.Item with AsBait = Some loot }
+                    { state.Item with AsBait = loot }
                 let state =
                     { state with
                         Item = item
@@ -679,6 +795,6 @@ let view (state: State) (dispatch: Msg -> unit) =
             Html.div [
                 prop.text "Bait on:"
             ]
-            LootView.view state.AsBaitState (AsBaitMsg >> dispatch)
+            OptionalLootView.view state.AsBaitState (AsBaitMsg >> dispatch)
         ]
     ]
