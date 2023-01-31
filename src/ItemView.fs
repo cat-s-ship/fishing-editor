@@ -97,9 +97,6 @@ module EditorWithStart =
         | None ->
             let data = getData ()
             Html.span [
-                Html.div [
-                    prop.textf "%A" data
-                ]
                 Html.button [
                     prop.text text
                     prop.onClick (fun _ ->
@@ -154,7 +151,7 @@ module DescripitionEditor =
     let view isInputEnabled (state: State) (dispatch: Msg -> unit) =
         Html.div [
             if isInputEnabled then
-                Html.input [
+                Html.textarea [
                     prop.value state.Description
                     prop.onInput (fun e ->
                         match e.target :?> Browser.Types.HTMLInputElement with
@@ -168,11 +165,11 @@ module DescripitionEditor =
             Html.div [
                 Html.button [
                     prop.onClick (fun _ -> dispatch Submit)
-                    prop.text "Submit"
+                    prop.text "Принять"
                 ]
                 Html.button [
                     prop.onClick (fun _ -> dispatch Cancel)
-                    prop.text "Cancel"
+                    prop.text "Отмена"
                 ]
             ]
         ]
@@ -258,7 +255,7 @@ module LootEditor =
                         Html.input [
                             prop.type' "checkbox"
                             prop.isChecked item.IsChecked
-                            prop.onClick (fun _ ->
+                            prop.onChange (fun (e: bool) ->
                                 SwitchChecked itemId
                                 |> dispatch
                             )
@@ -415,7 +412,7 @@ module LootView =
                     )
 
                     Html.button [
-                        prop.text "Edit"
+                        prop.text "Изменить"
                         prop.onClick (fun _ ->
                             dispatch StartEdit
                         )
@@ -427,7 +424,7 @@ module LootView =
                     LootEditor.view lootEditorState (LootEditorMsg >> dispatch)
 
                     Html.button [
-                        prop.text "Done"
+                        prop.text "Готово"
                         prop.onClick (fun _ ->
                             dispatch FinishEdit
                         )
@@ -528,15 +525,23 @@ module OptionalLootView =
                         cmd
                         None
 
-    let view (state: State) (dispatch: Msg -> unit) =
+    let view (id: string) (description: string) (state: State) (dispatch: Msg -> unit) =
         Html.div [
-            Html.input [
-                prop.type' "checkbox"
-                prop.isChecked state.IsEnable
-                prop.onClick (fun _ ->
-                    dispatch SwitchEnabled
-                )
+            Html.div [
+                Html.input [
+                    prop.id id
+                    prop.type' "checkbox"
+                    prop.isChecked state.IsEnable
+                    prop.onChange (fun (e: bool) ->
+                        dispatch SwitchEnabled
+                    )
+                ]
+                Html.label [
+                    prop.htmlFor id
+                    prop.text description
+                ]
             ]
+
             if state.IsEnable then
                 match state.LootViewState with
                 | Some lootViewState ->
@@ -763,44 +768,46 @@ let update getItem getAllItems (msg: Msg) (state: State) =
 let view (state: State) (dispatch: Msg -> unit) =
     Html.div [
         Html.div [
-            prop.textf "%A" state.Item
+            Html.h2 [
+                match state.Item.Name with
+                | "" ->
+                    Html.i [
+                        prop.text "Название отсутствует"
+                    ]
+                | name ->
+                    Html.span [
+                        prop.text name
+                    ]
+
+                EditorWithStart.view
+                    "Изменить"
+                    (DescripitionEditor.view true)
+                    (fun () -> state.Item.Name)
+                    state.NameEditorState
+                    (NameEditorMsg >> dispatch)
+            ]
         ]
 
         Html.div [
-            Html.span [
-                prop.text "Name:"
-            ]
-            EditorWithStart.view
-                "Edit"
-                (DescripitionEditor.view true)
-                (fun () -> state.Item.Name)
-                state.NameEditorState
-                (NameEditorMsg >> dispatch)
-        ]
+            match state.Item.Description with
+            | "" ->
+                Html.i [
+                    prop.text "описание отсутствует"
+                ]
+            | description ->
+                Html.div [
+                    prop.text description
+                ]
 
-        Html.div [
-            Html.span [
-                prop.text "Description:"
-            ]
             EditorWithStart.view
-                "Edit"
+                "Изменить"
                 (DescripitionEditor.view true)
                 (fun () -> state.Item.Description)
                 state.DescripitionEditorState
                 (DescripitionEditorMsg >> dispatch)
         ]
 
-        EditorWithStart.view
-            "Remove"
-            (DescripitionEditor.view false)
-            (fun () -> "")
-            state.IsStartedRemove
-            (SetRemove >> dispatch)
-
         Html.div [
-            Html.span [
-                prop.text "Image:"
-            ]
             match state.Item.ImageUrl with
             | Some src ->
                 Html.img [
@@ -808,10 +815,10 @@ let view (state: State) (dispatch: Msg -> unit) =
                     prop.width 100
                 ]
             | None ->
-                Html.div [ prop.text "None" ]
+                Html.i [ prop.text "Картинка отсутствует" ]
 
             EditorWithStart.view
-                "Edit"
+                "Изменить"
                 (DescripitionEditor.view true)
                 (fun () ->
                     state.Item.ImageUrl
@@ -822,16 +829,25 @@ let view (state: State) (dispatch: Msg -> unit) =
         ]
 
         Html.div [
-            Html.div [
-                prop.text "Bait on:"
-            ]
-            OptionalLootView.view state.AsBaitState (AsBaitMsg >> dispatch)
+            OptionalLootView.view
+                (sprintf "asBait_%A" state.Item.Id)
+                "Использовать в качестве наживки"
+                state.AsBaitState
+                (AsBaitMsg >> dispatch)
         ]
 
         Html.div [
-            Html.div [
-                prop.text "Chest contains:"
-            ]
-            OptionalLootView.view state.AsChestState (AsChestMsg >> dispatch)
+            OptionalLootView.view
+                (sprintf "asChest_%A" state.Item.Id)
+                "Использовать в качестве сундука"
+                state.AsChestState
+                (AsChestMsg >> dispatch)
         ]
+
+        EditorWithStart.view
+            "Удалить"
+            (DescripitionEditor.view false)
+            (fun () -> "")
+            state.IsStartedRemove
+            (SetRemove >> dispatch)
     ]

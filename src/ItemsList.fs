@@ -157,7 +157,7 @@ let view (state: State) (dispatch: Msg -> unit) =
         Html.div [
             yield!
                 state.Items
-                |> Seq.sortByDescending (fun (KeyValue(dateTime, _)) -> dateTime)
+                |> Seq.sortBy (fun (KeyValue(itemId, item)) -> itemId)
                 |> Seq.map (fun (KeyValue(k, e)) ->
                     ItemView.view e (fun msg -> ItemViewMsg(k, msg) |> dispatch)
                 )
