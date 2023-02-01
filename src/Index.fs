@@ -96,9 +96,7 @@ let update (msg: Msg) (state: State) =
             }
         state, Cmd.none
 
-let router = React.functionComponent(fun () ->
-    let state, dispatch = React.useElmish(init, update, Router.currentUrl())
-
+let view state dispatch =
     React.router [
         router.onUrlChanged (parseRoute >> ChangePage >> dispatch)
         router.children [
@@ -111,4 +109,8 @@ let router = React.functionComponent(fun () ->
                 Html.h1 (sprintf "Not found %A" query)
         ]
     ]
-)
+
+[<ReactComponent>]
+let Router () =
+    let state, dispatch = React.useElmish(init, update, Router.currentUrl())
+    view state dispatch

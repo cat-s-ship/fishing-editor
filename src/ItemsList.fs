@@ -11,15 +11,7 @@ type Msg =
     | StartNewItem
     | SetItem of Item
     | RemoveItem of Item
-    | ItemViewMsg of ItemId * ItemView.Msg
     | UploadElmishMsg of Upload.Elmish.Msg
-
-type State =
-    {
-        LocalItems: LocalItems
-        Items: Map<ItemId, ItemView.State>
-        UploadElmishState: Upload.Elmish.State<LocalItems>
-    }
 
 module LocalItems =
     let get itemId localItems =
@@ -27,27 +19,29 @@ module LocalItems =
         | Some item -> Ok item
         | None -> Error (sprintf "%A not found" itemId)
 
-let init localItems =
-    let items, cmd =
-        localItems.Cache
-        |> Seq.mapFold
-            (fun m (KeyValue(itemId, item)) ->
-                let state, cmd = ItemView.init (fun itemId -> LocalItems.get itemId localItems) item
-                let m = Map.add itemId state m
-                cmd |> Cmd.map (fun cmd -> ItemViewMsg (itemId, cmd)), m
-            )
-            Map.empty
-        |> fun (cmds, state) ->
-            state, Cmd.batch cmds
+type State =
+    {
+        LocalItems: LocalItems
+        UploadElmishState: Upload.Elmish.State<LocalItems>
+    }
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+[<RequireQualifiedAccess>]
+module State =
+    let getAllItems state =
+        state.LocalItems.Cache
+        |> Seq.map (fun (KeyValue(_, item)) -> item)
+        |> Array.ofSeq
+    let getItem itemId state =
+        LocalItems.get itemId state.LocalItems
 
+let init localItems =
     let state =
         {
             LocalItems = localItems
-            Items = items
             UploadElmishState =
                 Upload.Elmish.init
         }
-    state, cmd
+    state, Cmd.none
 
 let update (msg: Msg) (state: State) =
     match msg with
@@ -69,53 +63,6 @@ let update (msg: Msg) (state: State) =
         state, Cmd.none
     | StartNewItem ->
         state, Cmd.navigate [| Routes.ItemAdderPageRoute |]
-    | ItemViewMsg (itemId, msg) ->
-        match Map.tryFind itemId state.Items with
-        | Some itemState ->
-            let getAllItems () =
-                state.LocalItems.Cache
-                |> Seq.map (fun (KeyValue(_, item)) -> item)
-                |> Array.ofSeq
-            let getItem itemId =
-                LocalItems.get itemId state.LocalItems
-            let state', cmd, event = ItemView.update getItem getAllItems msg itemState
-
-            let state =
-                { state with
-                    Items =
-                        Map.add itemId state' state.Items
-                }
-            let cmd =
-                cmd |> Cmd.map (fun cmd -> ItemViewMsg(itemId, cmd))
-
-            match event with
-            | Some x ->
-                match x with
-                | ItemView.UpdateItemRes e ->
-                    let cmd =
-                        Cmd.batch [
-                            cmd
-                            Cmd.ofMsg (SetItem e)
-                        ]
-                    state, cmd
-                | ItemView.RemoveRes ->
-                    let state =
-                        { state with
-                            Items =
-                                Map.remove itemId state.Items
-                        }
-
-                    let cmd =
-                        Cmd.batch [
-                            cmd
-                            Cmd.ofMsg (RemoveItem itemState.Item)
-                        ]
-                    state, cmd
-            | None ->
-                state, cmd
-
-        | None ->
-            state, Cmd.none
     | UploadElmishMsg msg ->
         match Upload.Elmish.update LocalItems.import msg state.UploadElmishState with
         | Upload.Elmish.UpdateRes(state') ->
@@ -143,7 +90,7 @@ let view (state: State) (dispatch: Msg -> unit) =
                 onDone = id
             |}
 
-            Upload.Elmish.view state.UploadElmishState (UploadElmishMsg >> dispatch)
+            // Upload.Elmish.view state.UploadElmishState (UploadElmishMsg >> dispatch)
         ]
 
         Html.div [
@@ -154,12 +101,27 @@ let view (state: State) (dispatch: Msg -> unit) =
                 )
             ]
         ]
-        Html.div [
-            yield!
-                state.Items
-                |> Seq.sortBy (fun (KeyValue(itemId, item)) -> itemId)
-                |> Seq.map (fun (KeyValue(k, e)) ->
-                    ItemView.view e (fun msg -> ItemViewMsg(k, msg) |> dispatch)
-                )
-        ]
+
+        Html.div (
+            state.LocalItems.Cache
+            |> Seq.sortBy (fun (KeyValue(itemId, item)) -> itemId)
+            |> Seq.map (fun (KeyValue(itemId, item)) ->
+                Html.div [
+                    prop.key itemId
+                    prop.children [
+                        ItemView.Component {|
+                            Item = item
+                            GetItem = fun itemId ->
+                                State.getItem itemId state
+                            GetAllItems = fun () ->
+                                State.getAllItems state
+                            UpdateItem = fun item ->
+                                SetItem item |> dispatch
+                            RemoveCurrentItem = fun () ->
+                                RemoveItem item |> dispatch
+                        |}
+                    ]
+                ]
+            )
+        )
     ]

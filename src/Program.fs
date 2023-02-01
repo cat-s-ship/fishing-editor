@@ -1,16 +1,12 @@
 ﻿module Program
-open Feliz
-open Browser.Dom
-open Fable.Builders.Fela
-
-let view =
-    Fela.RendererProvider {
-        renderer (Fela.createRenderer ())
-
-        Index.router ()
-    }
+open Elmish
+open Elmish.React
 
 Utils.RegisterServiceWorker.registerServiceWorker.``default`` ()
 
-let root = ReactDOM.createRoot(document.getElementById "feliz-app")
-root.render(view)
+Program.mkProgram Index.init Index.update Index.view
+#if DEBUG
+|> Program.withConsoleTrace
+#endif
+|> Program.withReactSynchronous "feliz-app"
+|> Program.runWith []

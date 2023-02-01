@@ -1,6 +1,7 @@
 module ItemView
 open Elmish
 open Feliz
+open Feliz.UseElmish
 
 open Utils.ElmishExt.Elmish
 open Commons
@@ -859,3 +860,35 @@ let view (state: State) (dispatch: Msg -> unit) =
             state.IsStartedRemove
             (SetRemove >> dispatch)
     ]
+
+type Props =
+    {|
+        Item: Item
+        GetItem: ItemId -> Result<Item,string>
+        GetAllItems: unit -> Item []
+        UpdateItem: Item -> unit
+        RemoveCurrentItem: unit -> unit
+    |}
+
+[<ReactComponent>]
+let Component (props: Props) =
+    let init () = init props.GetItem props.Item
+    let update msg state =
+        let state, cmd, res =
+            update
+                props.GetItem
+                props.GetAllItems
+                msg
+                state
+        res
+        |> Option.iter (fun res ->
+            match res with
+            | UpdateItemRes item ->
+                props.UpdateItem item
+            | RemoveRes ->
+                props.RemoveCurrentItem ()
+        )
+        state, cmd
+
+    let state, dispatch = React.useElmish(init, update, [| box props.GetAllItems |])
+    view state dispatch
