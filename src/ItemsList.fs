@@ -2,6 +2,7 @@ module ItemsList
 open Elmish
 open Feliz
 open Feliz.Router
+open Fable.Builders.Fela
 
 open Components
 open Commons
@@ -86,11 +87,15 @@ let view (state: State) (dispatch: Msg -> unit) =
                 description = "save"
                 accept = "application/json"
                 filename = "events.json"
-                getData = fun () -> LocalItems.export state.LocalItems
+                getData = fun () -> LocalItems.encode state.LocalItems
                 onDone = id
             |}
 
-            // Upload.Elmish.view state.UploadElmishState (UploadElmishMsg >> dispatch)
+            Fela.RendererProvider {
+                renderer (Fela.createRenderer ())
+
+                Upload.Elmish.view state.UploadElmishState (UploadElmishMsg >> dispatch)
+            }
         ]
 
         Html.div [
