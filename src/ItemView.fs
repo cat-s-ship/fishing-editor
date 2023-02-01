@@ -825,6 +825,7 @@ let view (api: Api) (state: State) (dispatch: Msg -> unit) =
             match state.Item.ImageUrl with
             | Some src ->
                 Html.img [
+                    prop.custom("loading", "lazy")
                     prop.src src
                     prop.width 100
                 ]
