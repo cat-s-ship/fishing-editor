@@ -558,13 +558,18 @@ module OptionalLootView =
                 | None -> ()
         ]
 
+type Api = {
+    GetItem: ItemId -> Result<Item,string>
+    GetAllItems: unit -> Item array
+}
+
 type Msg =
     | DescripitionEditorMsg of EditorWithStart.Msg<DescripitionEditor.InitData, DescripitionEditor.Msg>
     | NameEditorMsg of EditorWithStart.Msg<DescripitionEditor.InitData, DescripitionEditor.Msg>
     | SetRemove of EditorWithStart.Msg<DescripitionEditor.InitData, DescripitionEditor.Msg>
     | ImageUrlEditorMsg of EditorWithStart.Msg<DescripitionEditor.InitData, DescripitionEditor.Msg>
-    | AsBaitMsg of OptionalLootView.Msg
-    | AsChestMsg of OptionalLootView.Msg
+    | AsBaitMsg of Api * OptionalLootView.Msg
+    | AsChestMsg of Api * OptionalLootView.Msg
 
 type State =
     {
@@ -577,11 +582,11 @@ type State =
         AsChestState: OptionalLootView.State
     }
 
-let init getItem (item: Item) =
-    let asBaitState, cmd = OptionalLootView.init getItem item.AsBait
-    let cmd1 = cmd |> Cmd.map AsBaitMsg
-    let asChestState, cmd = OptionalLootView.init getItem item.AsChest
-    let cmd2 = cmd |> Cmd.map AsChestMsg
+let init (api: Api) (item: Item) =
+    let asBaitState, cmd = OptionalLootView.init api.GetItem item.AsBait
+    let cmd1 = cmd |> Cmd.map (fun cmd -> AsBaitMsg(api, cmd))
+    let asChestState, cmd = OptionalLootView.init api.GetItem item.AsChest
+    let cmd2 = cmd |> Cmd.map (fun cmd -> AsChestMsg(api, cmd))
 
     let state =
         {
@@ -604,7 +609,7 @@ type UpdateResultEvent =
     | UpdateItemRes of Item
     | RemoveRes
 
-let update getItem getAllItems (msg: Msg) (state: State) =
+let update (msg: Msg) (state: State) =
     match msg with
     | DescripitionEditorMsg msg ->
         let state', cmd, submit =
@@ -727,13 +732,13 @@ let update getItem getAllItems (msg: Msg) (state: State) =
                 Cmd.none
                 (Some RemoveRes)
 
-    | AsBaitMsg msg ->
-        let state', cmd, res = OptionalLootView.update getItem getAllItems msg state.AsBaitState
+    | AsBaitMsg(api, msg) ->
+        let state', cmd, res = OptionalLootView.update api.GetItem api.GetAllItems msg state.AsBaitState
         let state =
             { state with
                 AsBaitState = state'
             }
-        let cmd = cmd |> Cmd.map AsBaitMsg
+        let cmd = cmd |> Cmd.map (fun cmd -> AsBaitMsg(api, cmd))
         match res with
         | Some res ->
             match res with
@@ -750,13 +755,13 @@ let update getItem getAllItems (msg: Msg) (state: State) =
                     (Some <| UpdateItemRes item)
         | None ->
             UpdateResult.create state cmd None
-    | AsChestMsg msg ->
-        let state', cmd, res = OptionalLootView.update getItem getAllItems msg state.AsChestState
+    | AsChestMsg(api, msg) ->
+        let state', cmd, res = OptionalLootView.update api.GetItem api.GetAllItems msg state.AsChestState
         let state =
             { state with
                 AsChestState = state'
             }
-        let cmd = cmd |> Cmd.map AsChestMsg
+        let cmd = cmd |> Cmd.map (fun cmd -> AsChestMsg(api, cmd))
         match res with
         | Some res ->
             match res with
@@ -774,7 +779,7 @@ let update getItem getAllItems (msg: Msg) (state: State) =
         | None ->
             UpdateResult.create state cmd None
 
-let view (state: State) (dispatch: Msg -> unit) =
+let view (api: Api) (state: State) (dispatch: Msg -> unit) =
     Html.div [
         Html.div [
             Html.h2 [
@@ -842,7 +847,7 @@ let view (state: State) (dispatch: Msg -> unit) =
                 (sprintf "asBait_%A" state.Item.Id)
                 "Использовать в качестве наживки"
                 state.AsBaitState
-                (AsBaitMsg >> dispatch)
+                (fun cmd -> AsBaitMsg(api, cmd) |> dispatch)
         ]
 
         Html.div [
@@ -850,7 +855,7 @@ let view (state: State) (dispatch: Msg -> unit) =
                 (sprintf "asChest_%A" state.Item.Id)
                 "Использовать в качестве сундука"
                 state.AsChestState
-                (AsChestMsg >> dispatch)
+                (fun cmd -> AsChestMsg(api, cmd) |> dispatch)
         ]
 
         EditorWithStart.view
@@ -872,14 +877,15 @@ type Props =
 
 [<ReactComponent>]
 let Component (props: Props) =
-    let init () = init props.GetItem props.Item
+    let api =
+        {
+            GetAllItems = props.GetAllItems
+            GetItem = props.GetItem
+        }
+
     let update msg state =
         let state, cmd, res =
-            update
-                props.GetItem
-                props.GetAllItems
-                msg
-                state
+            update msg state
         res
         |> Option.iter (fun res ->
             match res with
@@ -890,5 +896,7 @@ let Component (props: Props) =
         )
         state, cmd
 
-    let state, dispatch = React.useElmish(init, update, [| box props.GetAllItems |])
-    view state dispatch
+    let init () = init api props.Item
+
+    let state, dispatch = React.useElmish(init, update, [||])
+    view api state dispatch
