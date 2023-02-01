@@ -18,30 +18,36 @@ module LocalItems =
         }
 
     let decode rawJson =
-        Json.Decode.fromString Items.decoder rawJson
+        Items.decode rawJson
         |> Result.map (fun items ->
             {
                 Cache = items
             }
         )
 
-    let load () : Result<LocalItems, string> =
-        match Browser.WebStorage.localStorage.getItem localKey with
-        | null ->
-            Ok empty
-        | res ->
-            decode res
+    let encode (localItemsApi: LocalItems) =
+        Items.encode 0 localItemsApi.Cache
+
+    module LocalStorage =
+        open Browser.WebStorage
+
+        let load () : Result<LocalItems, string> =
+            match localStorage.getItem localKey with
+            | null ->
+                Ok empty
+            | res ->
+                decode res
+
+        let save (localItems: LocalItems) =
+            localStorage.setItem (localKey, Items.encode 0 localItems.Cache)
 
     let import (rawJson: string) =
         decode rawJson
         |> Result.map (fun localItems ->
-            Browser.WebStorage.localStorage.setItem (localKey, Items.encode localItems.Cache)
+            LocalStorage.save localItems
 
             localItems
         )
-
-    let export (localItemsApi: LocalItems) =
-        Items.encode localItemsApi.Cache
 
     let get (itemId: ItemId) (localItemsApi: LocalItems) =
         localItemsApi.Cache
@@ -49,24 +55,26 @@ module LocalItems =
 
     let set (item: Item) (localItemsApi: LocalItems) =
         let items =
-            Map.add item.Id item localItemsApi.Cache
+            { localItemsApi with
+                Cache =
+                    Map.add item.Id item localItemsApi.Cache
+            }
 
-        Browser.WebStorage.localStorage.setItem (localKey, Items.encode items)
+        LocalStorage.save items
 
-        { localItemsApi with
-            Cache = items
-        }
+        items
 
-    let insert id fn (localItemsApi: LocalItems) =
-        let newItem = Item.create id fn
+    let insert itemId fn (localItemsApi: LocalItems) =
+        let newItem = Item.create itemId fn
         set newItem localItemsApi
 
-    let remove dateTime (localItemsApi: LocalItems) =
+    let remove itemId (localItemsApi: LocalItems) =
         let items =
-            Map.remove dateTime localItemsApi.Cache
+            { localItemsApi with
+                Cache =
+                    Map.remove itemId localItemsApi.Cache
+            }
 
-        Browser.WebStorage.localStorage.setItem (localKey, Items.encode items)
+        LocalStorage.save items
 
-        { localItemsApi with
-            Cache = items
-        }
+        items

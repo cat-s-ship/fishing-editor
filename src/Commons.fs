@@ -100,6 +100,9 @@ module Items =
             get.Required.Field "value" decoder
         )
 
+    let decode rawJson =
+        Decode.fromString decoder rawJson
+
     let encoder : Encoder<Items> = fun items ->
         let items =
             items
@@ -117,9 +120,9 @@ module Items =
             "value", items
         ]
 
-    let encode (items: Items) =
+    let encode space (items: Items) =
         encoder items
-        |> Encode.toString 0
+        |> Encode.toString space
 
 module Routes =
     [<Literal>]
