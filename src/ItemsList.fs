@@ -13,6 +13,7 @@ type Msg =
     | SetItem of Item
     | RemoveItem of Item
     | UploadElmishMsg of Upload.Elmish.Msg
+    | FilterByName of pattern: string
 
 module LocalItems =
     let get itemId localItems =
@@ -24,6 +25,7 @@ type State =
     {
         LocalItems: LocalItems
         UploadElmishState: Upload.Elmish.State<LocalItems>
+        FilterByNamePattern: string
     }
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 [<RequireQualifiedAccess>]
@@ -41,6 +43,7 @@ let init localItems =
             LocalItems = localItems
             UploadElmishState =
                 Upload.Elmish.init
+            FilterByNamePattern = ""
         }
     state, Cmd.none
 
@@ -80,6 +83,13 @@ let update (msg: Msg) (state: State) =
                 }
             state, cmd
 
+    | FilterByName pattern ->
+        let state =
+            { state with
+                FilterByNamePattern = pattern
+            }
+        state, Cmd.none
+
 let view (state: State) (dispatch: Msg -> unit) =
     Html.div [
         Html.div [
@@ -107,10 +117,28 @@ let view (state: State) (dispatch: Msg -> unit) =
             ]
         ]
 
-        Html.div (
-            state.LocalItems.Cache
-            |> Seq.sortBy (fun (KeyValue(itemId, item)) -> itemId)
-            |> Seq.map (fun (KeyValue(itemId, item)) ->
+        let id = "filterByName"
+        Html.div [
+            Html.label [
+                prop.text "Отфильтровать по имени: "
+                prop.htmlFor id
+            ]
+            Html.input [
+                prop.id id
+                prop.onChange (fun (value: string) ->
+                    dispatch (FilterByName value)
+                )
+            ]
+        ]
+
+        let filterByNamePattern = state.FilterByNamePattern.ToLower()
+        Html.div [
+            let items =
+                state.LocalItems.Cache
+                |> Seq.filter (fun (KeyValue(itemId, item)) ->
+                    item.Name.ToLower().Contains filterByNamePattern
+                )
+            for KeyValue(itemId, item) in items do
                 Html.div [
                     prop.key itemId
                     prop.children [
@@ -127,6 +155,5 @@ let view (state: State) (dispatch: Msg -> unit) =
                         |}
                     ]
                 ]
-            )
-        )
+        ]
     ]
