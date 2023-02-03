@@ -19,7 +19,7 @@ type ItemV0 =
         Name: string
         Loot: ItemId []
         Description: string
-        ImageUrl: string
+        ImageUrl: string option
     }
 
 type Item =
@@ -61,7 +61,50 @@ module Item =
         fn item
 
     let decoder : Decoder<Item> =
-        Decode.Auto.generateDecoder ()
+        let lastId = Version.V1
+        let decoderV0 = Decode.Auto.generateDecoder () : Decoder<ItemV0>
+        let decoderV1 = Decode.Auto.generateDecoder () : Decoder<Item>
+
+        Decode.object (fun fields ->
+            let version =
+                let decodeVersion =
+                    Decode.int
+                    |> Decode.map enum<Version>
+                    |> Decode.andThen (fun version ->
+                        match version with
+                        | Version.V1
+                        | Version.V0 ->
+                            Decode.succeed version
+                        | unknownVersion ->
+                            Decode.fail (sprintf "unknown %A version of item" unknownVersion)
+                    )
+                Decode.oneOf [
+                    Decode.field "version" decodeVersion
+                    Decode.field "Version" decodeVersion
+                ]
+                |> fields.Required.Raw
+
+            match version with
+            | Version.V1 ->
+                fields.Required.Raw decoderV1
+            | Version.V0 ->
+                let old = fields.Required.Raw decoderV0
+                {
+                    Version = lastId
+                    Id = old.ItemId
+                    Name = old.Name
+                    AsBait =
+                        match old.Loot with
+                        | [||] -> None
+                        | loot -> Some loot
+                    AsChest = None
+                    Description = old.Description
+                    ImageUrl = old.ImageUrl
+                }
+
+            | unknownVersion ->
+                failwithf "unknown %A version of item" unknownVersion
+        )
 
     let encode : Encoder<Item> =
         Encode.Auto.generateEncoder ()
@@ -86,8 +129,10 @@ module Items =
                 get.Required.Field "dataType" decoder
 
             let KeyValueDecoder =
-                Decode.index 0 Decode.guid |> ignore
-                Decode.index 1 Item.decoder
+                Decode.index 0 Decode.guid
+                |> Decode.andThen (fun _ ->
+                    Decode.index 1 Item.decoder
+                )
 
             let decoder =
                 Decode.array KeyValueDecoder
