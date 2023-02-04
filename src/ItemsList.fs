@@ -138,6 +138,10 @@ let view (state: State) (dispatch: Msg -> unit) =
                 |> Seq.filter (fun (KeyValue(itemId, item)) ->
                     item.Name.ToLower().Contains filterByNamePattern
                 )
+                |> Seq.sortByDescending (fun (KeyValue(itemId, item)) ->
+                    item.Created
+                    |> Option.defaultValue System.DateTime.MinValue
+                )
             for KeyValue(itemId, item) in items do
                 Html.div [
                     prop.key itemId

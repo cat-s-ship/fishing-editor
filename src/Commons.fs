@@ -2,6 +2,7 @@ module Commons
 type Version =
     | V0 = 0
     | V1 = 1
+    | V2 = 2
 
 type ItemId = System.Guid
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -21,11 +22,51 @@ type ItemV0 =
         Description: string
         ImageUrl: string option
     }
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+[<RequireQualifiedAccess>]
+module ItemV0 =
+    open Thoth.Json
+
+    let decoder : Decoder<ItemV0> =
+        Decode.Auto.generateDecoder ()
+
+type ItemV1 =
+    {
+        Version: Version
+        Id: ItemId
+        Name: string
+        AsBait: Option<Loot>
+        AsChest: Option<Loot>
+        Description: string
+        ImageUrl: Option<string>
+    }
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+[<RequireQualifiedAccess>]
+module ItemV1 =
+    open Thoth.Json
+
+    let ofPrev (old: ItemV0) =
+        {
+            Version = Version.V1
+            Id = old.ItemId
+            Name = old.Name
+            AsBait =
+                match old.Loot with
+                | [||] -> None
+                | loot -> Some loot
+            AsChest = None
+            Description = old.Description
+            ImageUrl = old.ImageUrl
+        }
+
+    let decoder : Decoder<ItemV1> =
+        Decode.Auto.generateDecoder ()
 
 type Item =
     {
         Version: Version
         Id: ItemId
+        Created: System.DateTime option
         Name: string
         AsBait: Option<Loot>
         AsChest: Option<Loot>
@@ -38,10 +79,60 @@ type Item =
 module Item =
     open Thoth.Json
 
-    let createFull id name asBait asChest description imageUrl : Item =
+    let ofPrev (old: ItemV1) =
+        {
+            Version = Version.V2
+            Created = None
+            Id = old.Id
+            Name = old.Name
+            AsBait = old.AsBait
+            AsChest = old.AsChest
+            Description = old.Description
+            ImageUrl = old.ImageUrl
+        }
+
+    let decoderOnly : Decoder<Item> =
+        Decode.Auto.generateDecoder ()
+
+    type ItemVersionContainer =
+        | V0Container of ItemV0
+        | V1Container of ItemV1
+        | V2Container of Item
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    [<RequireQualifiedAccess>]
+    module ItemVersionContainer =
+        let rec getLastVersion (itemVersionContainer: ItemVersionContainer) =
+            match itemVersionContainer with
+            | V2Container itemV2 ->
+                itemV2
+            | V1Container itemV1 ->
+                ofPrev itemV1
+                |> V2Container
+                |> getLastVersion
+            | V0Container itemV0 ->
+                ItemV1.ofPrev itemV0
+                |> V1Container
+                |> getLastVersion
+
+        let decodeByVersion (version: Version) (getters: Decode.IGetters) =
+            match version with
+            | Version.V2 ->
+                getters.Required.Raw decoderOnly
+                |> V2Container
+            | Version.V1 ->
+                getters.Required.Raw ItemV1.decoder
+                |> V1Container
+            | Version.V0 ->
+                getters.Required.Raw ItemV0.decoder
+                |> V0Container
+            | unknownVersion ->
+                failwithf "unknown %A version of item" unknownVersion
+
+    let createFull id created name asBait asChest description imageUrl : Item =
         {
             Version = Version.V1
             Id = id
+            Created = created
             Name = name
             AsBait = asBait
             AsChest = asChest
@@ -53,6 +144,7 @@ module Item =
         let item =
             createFull
                 id
+                (Some System.DateTime.UtcNow)
                 ""
                 None
                 None
@@ -61,10 +153,6 @@ module Item =
         fn item
 
     let decoder : Decoder<Item> =
-        let lastId = Version.V1
-        let decoderV0 = Decode.Auto.generateDecoder () : Decoder<ItemV0>
-        let decoderV1 = Decode.Auto.generateDecoder () : Decoder<Item>
-
         Decode.object (fun fields ->
             let version =
                 let decodeVersion =
@@ -72,6 +160,7 @@ module Item =
                     |> Decode.map enum<Version>
                     |> Decode.andThen (fun version ->
                         match version with
+                        | Version.V2
                         | Version.V1
                         | Version.V0 ->
                             Decode.succeed version
@@ -84,26 +173,8 @@ module Item =
                 ]
                 |> fields.Required.Raw
 
-            match version with
-            | Version.V1 ->
-                fields.Required.Raw decoderV1
-            | Version.V0 ->
-                let old = fields.Required.Raw decoderV0
-                {
-                    Version = lastId
-                    Id = old.ItemId
-                    Name = old.Name
-                    AsBait =
-                        match old.Loot with
-                        | [||] -> None
-                        | loot -> Some loot
-                    AsChest = None
-                    Description = old.Description
-                    ImageUrl = old.ImageUrl
-                }
-
-            | unknownVersion ->
-                failwithf "unknown %A version of item" unknownVersion
+            ItemVersionContainer.decodeByVersion version fields
+            |> ItemVersionContainer.getLastVersion
         )
 
     let encode : Encoder<Item> =

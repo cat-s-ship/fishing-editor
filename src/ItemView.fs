@@ -803,6 +803,18 @@ let view (api: Api) (state: State) (dispatch: Msg -> unit) =
         ]
 
         Html.div [
+            match state.Item.Created with
+            | None ->
+                Html.i [
+                    prop.text "Время создания неизвестно"
+                ]
+            | Some created ->
+                Html.div [
+                    prop.textf "Создан %A" (Components.Utils.CustomDateTime.toString (created.ToLocalTime ()))
+                ]
+        ]
+
+        Html.div [
             match state.Item.Description with
             | "" ->
                 Html.i [
