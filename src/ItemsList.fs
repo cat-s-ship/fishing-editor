@@ -66,7 +66,14 @@ let update (msg: Msg) (state: State) =
             }
         state, Cmd.none
     | StartNewItem ->
-        state, Cmd.navigate [| Routes.ItemAdderPageRoute |]
+        let newItemId = ItemId.create ()
+        let state =
+            { state with
+                LocalItems =
+                    state.LocalItems
+                    |> LocalItems.insert newItemId id
+            }
+        state, Cmd.none
     | UploadElmishMsg msg ->
         match Upload.Elmish.update LocalItems.import msg state.UploadElmishState with
         | Upload.Elmish.UpdateRes(state') ->

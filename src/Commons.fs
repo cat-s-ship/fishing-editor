@@ -243,6 +243,3 @@ module Items =
 module Routes =
     [<Literal>]
     let ItemsListPageRoute = "ItemsListPageRoute"
-
-    [<Literal>]
-    let ItemAdderPageRoute = "ItemAdderPageRoute"
